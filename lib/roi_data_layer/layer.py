@@ -13,6 +13,7 @@ RoIDataLayer implements a Caffe Python layer.
 from fast_rcnn.config import cfg
 from roi_data_layer.minibatch import get_minibatch
 import numpy as np
+import pdb
 
 class RoIDataLayer(object):
     """Fast R-CNN data layer used for training."""
@@ -25,7 +26,10 @@ class RoIDataLayer(object):
 
     def _shuffle_roidb_inds(self):
         """Randomly permute the training roidb."""
+        #np.random.seed(80)
         self._perm = np.random.permutation(np.arange(len(self._roidb)))
+        print ("shuffle order")
+        print (self._perm[0:5])
         self._cur = 0
 
     def _get_next_minibatch_inds(self):
@@ -36,6 +40,7 @@ class RoIDataLayer(object):
                 self._shuffle_roidb_inds()
 
             db_inds = self._perm[self._cur:self._cur + cfg.TRAIN.IMS_PER_BATCH]
+            #print db_inds
             self._cur += cfg.TRAIN.IMS_PER_BATCH
         else:
             # sample images

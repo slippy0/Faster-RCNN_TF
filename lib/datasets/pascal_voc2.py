@@ -148,6 +148,7 @@ class pascal_voc(datasets.imdb):
         Load image and bounding boxes info from XML file in the PASCAL VOC
         format.
         """
+        pdb.set_trace()
         filename = os.path.join(self._data_path, 'Annotations', index + '.xml')
         # print 'Loading: {}'.format(filename)
         def get_data_from_tag(node, tag):

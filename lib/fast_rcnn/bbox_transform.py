@@ -6,6 +6,7 @@
 # --------------------------------------------------------
 
 import numpy as np
+import pdb
 
 def bbox_transform(ex_rois, gt_rois):
     ex_widths = ex_rois[:, 2] - ex_rois[:, 0] + 1.0
@@ -28,6 +29,7 @@ def bbox_transform(ex_rois, gt_rois):
     return targets
 
 def bbox_transform_inv(boxes, deltas):
+   # pdb.set_trace()
     if boxes.shape[0] == 0:
         return np.zeros((0, deltas.shape[1]), dtype=deltas.dtype)
 
@@ -42,11 +44,12 @@ def bbox_transform_inv(boxes, deltas):
     dy = deltas[:, 1::4]
     dw = deltas[:, 2::4]
     dh = deltas[:, 3::4]
-
+    #print (dw.max(0))
     pred_ctr_x = dx * widths[:, np.newaxis] + ctr_x[:, np.newaxis]
     pred_ctr_y = dy * heights[:, np.newaxis] + ctr_y[:, np.newaxis]
     pred_w = np.exp(dw) * widths[:, np.newaxis]
     pred_h = np.exp(dh) * heights[:, np.newaxis]
+
 
     pred_boxes = np.zeros(deltas.shape, dtype=deltas.dtype)
     # x1

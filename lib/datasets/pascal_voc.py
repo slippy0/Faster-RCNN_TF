@@ -30,17 +30,16 @@ class pascal_voc(imdb):
                             else devkit_path
         self._data_path = os.path.join(self._devkit_path, 'VOC' + self._year)
         self._classes = ('__background__', # always index 0
-                         'aeroplane', 'bicycle', 'bird', 'boat',
-                         'bottle', 'bus', 'car', 'cat', 'chair',
-                         'cow', 'diningtable', 'dog', 'horse',
-                         'motorbike', 'person', 'pottedplant',
-                         'sheep', 'sofa', 'train', 'tvmonitor')
+                         'car')
+#, 'cow', 'diningtable', 'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor')
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
         self._image_ext = '.jpg'
         self._image_index = self._load_image_set_index()
         # Default to roidb handler
         #self._roidb_handler = self.selective_search_roidb
+        #pdb.set_trace()
         self._roidb_handler = self.gt_roidb
+        #pdb.set_trace()
         self._salt = str(uuid.uuid4())
         self._comp_id = 'comp4'
 
@@ -100,12 +99,13 @@ class pascal_voc(imdb):
         This function loads/saves from/to a cache file to speed up future calls.
         """
         cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
+        #pdb.set_trace()
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 roidb = cPickle.load(fid)
             print '{} gt roidb loaded from {}'.format(self.name, cache_file)
             return roidb
-
+        #pdb.set_trace()
         gt_roidb = [self._load_pascal_annotation(index)
                     for index in self.image_index]
         with open(cache_file, 'wb') as fid:
@@ -185,6 +185,7 @@ class pascal_voc(imdb):
         Load image and bounding boxes info from XML file in the PASCAL VOC
         format.
         """
+        #pdb.set_trace()
         filename = os.path.join(self._data_path, 'Annotations', index + '.xml')
         tree = ET.parse(filename)
         objs = tree.findall('object')
@@ -196,8 +197,9 @@ class pascal_voc(imdb):
             #     print 'Removed {} difficult objects'.format(
             #         len(objs) - len(non_diff_objs))
             objs = non_diff_objs
+        #pdb.set_trace()
         num_objs = len(objs)
-
+	#pdb.set_trace()
         boxes = np.zeros((num_objs, 4), dtype=np.uint16)
         gt_classes = np.zeros((num_objs), dtype=np.int32)
         overlaps = np.zeros((num_objs, self.num_classes), dtype=np.float32)
@@ -208,11 +210,13 @@ class pascal_voc(imdb):
         for ix, obj in enumerate(objs):
             bbox = obj.find('bndbox')
             # Make pixel indexes 0-based
-            x1 = float(bbox.find('xmin').text) - 1
-            y1 = float(bbox.find('ymin').text) - 1
-            x2 = float(bbox.find('xmax').text) - 1
-            y2 = float(bbox.find('ymax').text) - 1
-            cls = self._class_to_ind[obj.find('name').text.lower().strip()]
+            x1 = float(max(float(bbox.find('xmin').text) - 1, 0))
+            y1 = float(max(float(bbox.find('ymin').text) - 1, 0))
+            x2 = float(max(float(bbox.find('xmax').text) - 1, 0))
+            y2 = float(max(float(bbox.find('ymax').text) - 1, 0))
+            #pdb.set_trace()
+            cls = self._class_to_ind[obj.find('name').text.strip()]
+           # pdb.set_trace()
             boxes[ix, :] = [x1, y1, x2, y2]
             gt_classes[ix] = cls
             overlaps[ix, cls] = 1.0

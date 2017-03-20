@@ -12,6 +12,7 @@ from fast_rcnn.config import cfg
 from generate_anchors import generate_anchors
 from fast_rcnn.bbox_transform import bbox_transform_inv, clip_boxes
 from fast_rcnn.nms_wrapper import nms
+import pdb
 
 DEBUG = False
 
@@ -118,6 +119,7 @@ class ProposalLayer(caffe.Layer):
         scores = scores.transpose((0, 2, 3, 1)).reshape((-1, 1))
 
         # Convert anchors into proposals via bbox transformations
+        pdb.set_trace()
         proposals = bbox_transform_inv(anchors, bbox_deltas)
 
         # 2. clip predicted boxes to image

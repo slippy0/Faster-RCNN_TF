@@ -12,6 +12,7 @@ import numpy.random as npr
 import cv2
 from fast_rcnn.config import cfg
 from utils.blob import prep_im_for_blob, im_list_to_blob
+import pdb
 
 def get_minibatch(roidb, num_classes):
     """Given a roidb, construct a minibatch sampled from it."""
@@ -26,6 +27,7 @@ def get_minibatch(roidb, num_classes):
     fg_rois_per_image = np.round(cfg.TRAIN.FG_FRACTION * rois_per_image)
 
     # Get the input image blob, formatted for caffe
+    pdb.set_trace()
     im_blob, im_scales = _get_image_blob(roidb, random_scale_inds)
 
     blobs = {'data': im_blob}
@@ -42,6 +44,7 @@ def get_minibatch(roidb, num_classes):
         blobs['im_info'] = np.array(
             [[im_blob.shape[1], im_blob.shape[2], im_scales[0]]],
             dtype=np.float32)
+        pdb.set_trace()
     else: # not using RPN
         # Now, build the region of interest and label blobs
         rois_blob = np.zeros((0, 5), dtype=np.float32)
@@ -88,6 +91,7 @@ def _sample_rois(roidb, fg_rois_per_image, rois_per_image, num_classes):
     labels = roidb['max_classes']
     overlaps = roidb['max_overlaps']
     rois = roidb['boxes']
+    pdb.set_trace()
 
     # Select foreground RoIs as those with >= FG_THRESH overlap
     fg_inds = np.where(overlaps >= cfg.TRAIN.FG_THRESH)[0]
@@ -166,6 +170,7 @@ def _get_bbox_regression_labels(bbox_target_data, num_classes):
         bbox_inside_weights (ndarray): N x 4K blob of loss weights
     """
     clss = np.array(bbox_target_data[:, 0], dtype=np.uint16, copy=True)
+    pdb.set_trace()
     bbox_targets = np.zeros((clss.size, 4 * num_classes), dtype=np.float32)
     bbox_inside_weights = np.zeros(bbox_targets.shape, dtype=np.float32)
     inds = np.where(clss > 0)[0]

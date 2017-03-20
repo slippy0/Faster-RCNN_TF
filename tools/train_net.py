@@ -74,12 +74,19 @@ if __name__ == '__main__':
 
     print('Using config:')
     pprint.pprint(cfg)
-
+    #pdb.set_trace()
     if not args.randomize:
         # fix the random seeds (numpy and caffe) for reproducibility
-        np.random.seed(cfg.RNG_SEED)
+        t = cfg.RNG_SEED
+        print ('random seed: ' + str(t))
+        np.random.seed(t)
+    print '###### imdb_name:', args.imdb_name
+    print '###### args', args
     imdb = get_imdb(args.imdb_name)
+    print '####### imdb'
+    print imdb.num_images
     print 'Loaded dataset `{:s}` for training'.format(imdb.name)
+    #pdb.set_trace()
     roidb = get_training_roidb(imdb)
 
     output_dir = get_output_dir(imdb, None)

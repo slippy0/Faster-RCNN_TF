@@ -12,6 +12,7 @@ from generate_anchors import generate_anchors
 from fast_rcnn.bbox_transform import bbox_transform_inv, clip_boxes
 from fast_rcnn.nms_wrapper import nms
 import pdb
+import pdb
 
 
 DEBUG = False
@@ -33,6 +34,7 @@ def proposal_layer(rpn_cls_prob_reshape,rpn_bbox_pred,im_info,cfg_key,_feat_stri
     # take after_nms_topN proposals after NMS
     # return the top proposals (-> RoIs top, scores top)
     #layer_params = yaml.load(self.param_str_)
+    #pdb.set_trace()
     _anchors = generate_anchors(scales=np.array(anchor_scales))
     _num_anchors = _anchors.shape[0]
     rpn_cls_prob_reshape = np.transpose(rpn_cls_prob_reshape,[0,3,1,2])
@@ -102,6 +104,7 @@ def proposal_layer(rpn_cls_prob_reshape,rpn_bbox_pred,im_info,cfg_key,_feat_stri
     scores = scores.transpose((0, 2, 3, 1)).reshape((-1, 1))
 
     # Convert anchors into proposals via bbox transformations
+    #pdb.set_trace()
     proposals = bbox_transform_inv(anchors, bbox_deltas)
 
     # 2. clip predicted boxes to image

@@ -6,7 +6,7 @@
 # --------------------------------------------------------
 
 """Train a Fast R-CNN network."""
-
+import pdb
 from fast_rcnn.config import cfg
 import gt_data_layer.roidb as gdl_roidb
 import roi_data_layer.roidb as rdl_roidb
@@ -121,7 +121,7 @@ class SolverWrapper(object):
 
         rpn_smooth_l1 = self._modified_smooth_l1(3.0, rpn_bbox_pred, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights)
         rpn_loss_box = tf.reduce_mean(tf.reduce_sum(rpn_smooth_l1, reduction_indices=[1, 2, 3]))
- 
+
         # R-CNN
         # classification loss
         cls_score = self.net.get_output('cls_score')
@@ -147,12 +147,21 @@ class SolverWrapper(object):
         momentum = cfg.TRAIN.MOMENTUM
         train_op = tf.train.MomentumOptimizer(lr, momentum).minimize(loss, global_step=global_step)
 
-        # iintialize variables
+        # intialize variables
         sess.run(tf.global_variables_initializer())
-        if self.pretrained_model is not None:
+  	if self.pretrained_model is not None:
             print ('Loading pretrained model '
                    'weights from {:s}').format(self.pretrained_model)
-            self.net.load(self.pretrained_model, sess, self.saver, True)
+            if self.pretrained_model.endswith('.npy'):
+                self.net.load(self.pretrained_model, sess, self.saver, True)
+            elif self.pretrained_model.endswith('.ckpt'):
+                self.saver.restore(sess, self.pretrained_model)
+            else:
+                print("Unknown model type! Weights not loaded.")
+       # if self.pretrained_model is not None:
+       #     print ('Loading pretrained model '
+       #            'weights from {:s}').format(self.pretrained_model)
+      #      self.net.load(self.pretrained_model, sess, True)
 
         last_snapshot_iter = -1
         timer = Timer()
@@ -201,6 +210,7 @@ def get_training_roidb(imdb):
     """Returns a roidb (Region of Interest database) for use in training."""
     if cfg.TRAIN.USE_FLIPPED:
         print 'Appending horizontally-flipped training examples...'
+        #pdb.set_trace()
         imdb.append_flipped_images()
         print 'done'
 
