@@ -18,6 +18,7 @@ import tensorflow as tf
 import sys
 from tensorflow.python.client import timeline
 import time
+import pdb
 
 class SolverWrapper(object):
     """A simple wrapper around Caffe's solver.
@@ -146,7 +147,6 @@ class SolverWrapper(object):
                                         cfg.TRAIN.STEPSIZE, 0.1, staircase=True)
         momentum = cfg.TRAIN.MOMENTUM
         train_op = tf.train.MomentumOptimizer(lr, momentum).minimize(loss, global_step=global_step)
-
         # intialize variables
         sess.run(tf.global_variables_initializer())
   	if self.pretrained_model is not None:
@@ -165,6 +165,7 @@ class SolverWrapper(object):
 
         last_snapshot_iter = -1
         timer = Timer()
+        #pdb.set_trace()
         for iter in range(max_iters):
             # get one batch
             blobs = data_layer.forward()
@@ -202,6 +203,7 @@ class SolverWrapper(object):
             if (iter+1) % cfg.TRAIN.SNAPSHOT_ITERS == 0:
                 last_snapshot_iter = iter
                 self.snapshot(sess, iter)
+
 
         if last_snapshot_iter != iter:
             self.snapshot(sess, iter)
@@ -267,7 +269,7 @@ def filter_roidb(roidb):
 def train_net(network, imdb, roidb, output_dir, pretrained_model=None, max_iters=40000):
     """Train a Fast R-CNN network."""
     roidb = filter_roidb(roidb)
-    saver = tf.train.Saver(max_to_keep=100)
+    saver = tf.train.Saver(max_to_keep=100, write_version=tf.train.SaverDef.V1)
     with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
         sw = SolverWrapper(sess, saver, network, imdb, roidb, output_dir, pretrained_model=pretrained_model)
         print 'Solving...'

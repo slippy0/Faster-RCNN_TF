@@ -13,7 +13,11 @@ from fast_rcnn.bbox_transform import bbox_transform
 from utils.cython_bbox import bbox_overlaps
 import pdb
 
-DEBUG = False
+
+DEBUG = True
+_count = 0
+_fg_num = 0
+_bg_num = 0
 
 def proposal_target_layer(rpn_rois, gt_boxes,_num_classes):
     """
@@ -48,14 +52,12 @@ def proposal_target_layer(rpn_rois, gt_boxes,_num_classes):
         rois_per_image, _num_classes)
 
     if DEBUG:
-        print 'num fg: {}'.format((labels > 0).sum())
-        print 'num bg: {}'.format((labels == 0).sum())
+        global _count, _fg_num, _bg_num
         _count += 1
         _fg_num += (labels > 0).sum()
         _bg_num += (labels == 0).sum()
-        print 'num fg avg: {}'.format(_fg_num / _count)
-        print 'num bg avg: {}'.format(_bg_num / _count)
-        print 'ratio: {:.3f}'.format(float(_fg_num) / float(_bg_num))
+        if (_count % 20 == 0):
+            print 'num fg: {}, num bg: {} num fg avg: {}, num bg avg: {}, ratio: {:.3f}'.format((labels > 0).sum(), (labels == 0).sum(),_fg_num / _count, _bg_num / _count, float(_fg_num) / float(_bg_num))
 
     rois = rois.reshape(-1,5)
     labels = labels.reshape(-1,1)

@@ -27,7 +27,7 @@ def get_minibatch(roidb, num_classes):
     fg_rois_per_image = np.round(cfg.TRAIN.FG_FRACTION * rois_per_image)
 
     # Get the input image blob, formatted for caffe
-    pdb.set_trace()
+   # pdb.set_trace()
     im_blob, im_scales = _get_image_blob(roidb, random_scale_inds)
 
     blobs = {'data': im_blob}
@@ -44,7 +44,7 @@ def get_minibatch(roidb, num_classes):
         blobs['im_info'] = np.array(
             [[im_blob.shape[1], im_blob.shape[2], im_scales[0]]],
             dtype=np.float32)
-        pdb.set_trace()
+       # pdb.set_trace()
     else: # not using RPN
         # Now, build the region of interest and label blobs
         rois_blob = np.zeros((0, 5), dtype=np.float32)

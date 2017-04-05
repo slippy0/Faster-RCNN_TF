@@ -5,6 +5,7 @@ import roi_pooling_layer.roi_pooling_op_grad
 from rpn_msr.proposal_layer_tf import proposal_layer as proposal_layer_py
 from rpn_msr.anchor_target_layer_tf import anchor_target_layer as anchor_target_layer_py
 from rpn_msr.proposal_target_layer_tf import proposal_target_layer as proposal_target_layer_py
+import pdb
 
 
 
@@ -46,9 +47,16 @@ class Network(object):
             saver.restore(session, data_path)
         else:
             data_dict = np.load(data_path).item()
+            #with tf.variable_scope('conv5_1', reuse = True):
+           #     temp = tf.get_variable('weights')
+          #      pdb.set_trace()
+           #     print temp.name
+            #pdb.set_trace()
             for key in data_dict:
                 with tf.variable_scope(key, reuse=True):
+                    pdb.set_trace()
                     for subkey in data_dict[key]:
+                        pdb.set_trace()
                         try:
                             var = tf.get_variable(subkey)
                             session.run(var.assign(data_dict[key][subkey]))
@@ -61,6 +69,7 @@ class Network(object):
 
     def feed(self, *args):
         assert len(args)!=0
+        #pdb.set_trace()
         self.inputs = []
         for layer in args:
             if isinstance(layer, basestring):
@@ -93,12 +102,14 @@ class Network(object):
 
     @layer
     def conv(self, input, k_h, k_w, c_o, s_h, s_w, name, relu=True, padding=DEFAULT_PADDING, group=1, trainable=True):
+        #pdb.set_trace()
         self.validate_padding(padding)
         c_i = input.get_shape()[-1]
         assert c_i%group==0
         assert c_o%group==0
         convolve = lambda i, k: tf.nn.conv2d(i, k, [1, s_h, s_w, 1], padding=padding)
         with tf.variable_scope(name) as scope:
+            #pdb.set_trace()
 
             init_weights = tf.truncated_normal_initializer(0.0, stddev=0.01)
             init_biases = tf.constant_initializer(0.0)
@@ -114,7 +125,9 @@ class Network(object):
                 conv = tf.concat(3, output_groups)
             if relu:
                 bias = tf.nn.bias_add(conv, biases)
+                #pdb.set_trace()
                 return tf.nn.relu(bias, name=scope.name)
+
             return tf.nn.bias_add(conv, biases, name=scope.name)
 
     @layer
