@@ -41,9 +41,18 @@ def parse_args():
     parser.add_argument('--cfg', dest='cfg_file',
                         help='optional config file',
                         default=None, type=str)
-    parser.add_argument('--imdb', dest='imdb_name',
+    parser.add_argument('--source_imdb', dest='source_imdb_name',
                         help='dataset to train on',
-                        default='kitti_train', type=str)
+                        default='voc_2007_train', type=str)
+    parser.add_argument('--source_data_path', dest='source_data_path',
+                        help='Folder with source imdb data',
+                        default=None, type=str)
+    parser.add_argument('--target_imdb', dest='target_imdb_name',
+                        help='dataset to transfer to',
+                        default="kitti_train", type=str)
+    parser.add_argument('--target_data_path', dest='target_data_path',
+                        help='Folder with target imdb data',
+                        default=None, type=str)
     parser.add_argument('--rand', dest='randomize',
                         help='randomize (do not use a fixed seed)',
                         action='store_true')
@@ -53,7 +62,6 @@ def parse_args():
     parser.add_argument('--set', dest='set_cfgs',
                         help='set config keys', default=None,
                         nargs=argparse.REMAINDER)
-
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit(1)
@@ -78,18 +86,17 @@ if __name__ == '__main__':
     if not args.randomize:
         # fix the random seeds (numpy and caffe) for reproducibility
         t = cfg.RNG_SEED
-        print ('random seed: ' + str(t))
         np.random.seed(t)
-    print '###### imdb_name:', args.imdb_name
-    print '###### args', args
-    imdb = get_imdb(args.imdb_name)
-    print '####### imdb'
-    print imdb.num_images
-    print 'Loaded dataset `{:s}` for training'.format(imdb.name)
-    #pdb.set_trace()
-    roidb = get_training_roidb(imdb)
 
-    output_dir = get_output_dir(imdb, None)
+    # Load imdbs for both source and target domain
+    source_imdb = get_imdb(args.source_imdb_name, args.source_data_path)
+    target_imdb = get_imdb(args.target_imdb_name, args.target_data_path)
+    print 'source_imdb size: ', source_imdb.num_images
+    print 'target_imdb size: ', target_imdb.num_images
+    print 'Loaded dataset `{:s}` for training'.format(source_imdb.name)
+    roidb = get_training_roidb(source_imdb)
+
+    output_dir = get_output_dir(source_imdb, None)
     print 'Output will be saved to `{:s}`'.format(output_dir)
 
     device_name = '/{}:{:d}'.format(args.device,args.device_id)
@@ -98,6 +105,6 @@ if __name__ == '__main__':
     network = get_network(args.network_name)
     print 'Use network `{:s}` in training'.format(args.network_name)
 
-    train_net(network, imdb, roidb, output_dir,
+    train_net(network, source_imdb, roidb, output_dir,
               pretrained_model=args.pretrained_model,
               max_iters=args.max_iters)
