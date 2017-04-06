@@ -12,7 +12,6 @@ import xml.etree.ElementTree as ET
 import numpy as np
 import scipy.sparse
 import scipy.io as sio
-import utils.cython_bbox
 import cPickle
 import subprocess
 import uuid
@@ -35,11 +34,7 @@ class pascal_voc(imdb):
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
         self._image_ext = '.png'#'.jpg'
         self._image_index = self._load_image_set_index()
-        # Default to roidb handler
-        #self._roidb_handler = self.selective_search_roidb
-        #pdb.set_trace()
         self._roidb_handler = self.gt_roidb
-        #pdb.set_trace()
         self._salt = str(uuid.uuid4())
         self._comp_id = 'comp4'
 
@@ -99,13 +94,11 @@ class pascal_voc(imdb):
         This function loads/saves from/to a cache file to speed up future calls.
         """
         cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
-        #pdb.set_trace()
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 roidb = cPickle.load(fid)
             print '{} gt roidb loaded from {}'.format(self.name, cache_file)
             return roidb
-        #pdb.set_trace()
         gt_roidb = [self._load_pascal_annotation(index)
                     for index in self.image_index]
         with open(cache_file, 'wb') as fid:
@@ -345,7 +338,6 @@ class pascal_voc(imdb):
             self.config['cleanup'] = True
 
 if __name__ == '__main__':
-    from datasets.pascal_voc import pascal_voc
     d = pascal_voc('trainval', '2007')
     res = d.roidb
     from IPython import embed; embed()
