@@ -98,18 +98,13 @@ class imdb(object):
         raise NotImplementedError
 
     def _get_widths(self):
-      print "##### num_images", self.num_images
-      f = open('images_indexs.txt', 'wb')
-      for i in range(self.num_images):
-        f.write(self._image_index[i] + '\n')
-        #f.write(self.image_path_at(i) + '\n')
-      f.close()
-      #pdb.set_trace()
-      return [PIL.Image.open(self.image_path_at(i)).size[0]
-              for i in xrange(self.num_images)]
+        with open("images_indexes.txt", 'w') as f:
+            for i in range(self.num_images):
+                f.write(self._image_index[i] + '\n')
+        return [PIL.Image.open(self.image_path_at(i)).size[0]
+                for i in xrange(self.num_images)]
 
     def append_flipped_images(self):
-        print "total images: ", self.num_images
 	num_images = self.num_images
         widths = self._get_widths()
         for i in xrange(num_images):
@@ -118,9 +113,6 @@ class imdb(object):
             oldx2 = boxes[:, 2].copy()
             boxes[:, 0] = widths[i] - oldx2 - 1
             boxes[:, 2] = widths[i] - oldx1 - 1
-            #pdb.set_trace()
-           # print i
-            #if (i == 5035): #pdb.set_trace()
             assert (boxes[:, 2] >= boxes[:, 0]).all()
             entry = {'boxes' : boxes,
                      'gt_overlaps' : self.roidb[i]['gt_overlaps'],
