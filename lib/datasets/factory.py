@@ -6,15 +6,18 @@
 # --------------------------------------------------------
 
 """Factory method for easily getting imdbs by name."""
-import pdb
-__sets = {}
 
 import datasets.pascal_voc
 import datasets.imagenet3d
 import datasets.kitti
 import datasets.kitti_tracking
+import datasets.transfer
 
-# Set up voc_<year>_<split> using selective search "fast" mode
+import pdb
+
+__sets = {}
+
+# Set up voc_<year>_<split>
 for year in ['2007']:
     for split in ['train', 'val', 'trainval', 'test']:
         name = 'voc_{}_{}'.format(year, split)
@@ -40,6 +43,20 @@ def get_imdb(name, data_path=None):
         raise KeyError('Unknown dataset: {}'.format(name))
     #pdb.set_trace()
     return __sets[name](data_path=data_path)
+
+def get_transfer_imdb(source, target,
+            source_data_path=None, target_data_path=None):
+    """
+    Get an imdb for transfer learning.
+    Returned imdb has access to both domains' data.
+    """
+    if not source in __sets:
+        raise KeyError('Unknown dataset: {}'.format(source))
+    if not target in __sets:
+        raise KeyError('Unknown dataset: {}'.format(target))
+    source_imdb = __sets[source](data_path=source_data_path)
+    target_imdb = __sets[target](data_path=target_data_path)
+    return datasets.transfer(source_imdb, target_imdb)
 
 def list_imdbs():
     """List all registered imdbs."""
