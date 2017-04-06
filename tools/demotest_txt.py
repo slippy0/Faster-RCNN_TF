@@ -6,23 +6,23 @@ from fast_rcnn.nms_wrapper import nms
 from utils.timer import Timer
 import matplotlib.pyplot as plt
 import numpy as np
-import os, sys, cv2
+import os, cv2
 import argparse
 from networks.factory import get_network
-import pdb as pdb
+import pdbb
 #namepath = '/home/selfdriving/datasets/kitti/kittitrain_test.txt'
 namepath = '/home/selfdriving/datasets/kitti/kitti_test_split2.txt'
 filepath = '/home/selfdriving/datasets/kitti/images/training/image_2/';
 imgpath = './results/img1_out/'
 txtpath = './results/txt1_out/'
 CLASSES = ('__background__','Car')
-       #    'aeroplane', 'bicycle', 'bird', 'boat',
-        #   'bottle', 'bus', 'car', 'cat', 'chair',
-         #  'cow', 'diningtable', 'dog', 'horse',
-          # 'motorbike', 'person', 'pottedplant',
-          # 'sheep', 'sofa', 'train', 'tvmonitor')
+                #'aeroplane', 'bicycle', 'bird', 'boat',
+                #'bottle', 'bus', 'car', 'cat', 'chair',
+                #'cow', 'diningtable', 'dog', 'horse',
+                #'motorbike', 'person', 'pottedplant',
+                #'sheep', 'sofa', 'train', 'tvmonitor')
 
-
+# Alternative list of classes. Each of these we could expect to see in our data.
 #CLASSES = ('__background__','person','bike','motorbike','car','bus')
 
 def vis_detections(im, class_name, dets,ax, thresh=0.5):
@@ -60,9 +60,8 @@ def demo(sess, net, image_name):
 
     # Load the demo image
     im_file = os.path.join(cfg.DATA_DIR, 'demo', image_name)
-    #im_file = os.path.join('/home/corgi/Lab/label/pos_frame/ACCV/training/000001/',image_name)
     im = cv2.imread(im_file)
-    #pdb.set_trace()
+
     # Detect all object classes and regress object bounds
     timer = Timer()
     timer.tic()
