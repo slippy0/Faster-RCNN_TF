@@ -7,6 +7,7 @@ class Domain(Enum):
 
 class transfer(datasets.imdb):
     def __init__(self, source_imdb, target_imdb):
+        self.name = source_imdb.name + "_to_" + target_imdb.name
         self._source_imdb = source_imdb
         self._target_imdb = target_imdb
 

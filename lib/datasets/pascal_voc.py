@@ -17,7 +17,6 @@ import subprocess
 import uuid
 from voc_eval import voc_eval
 from fast_rcnn.config import cfg
-import pdb
 
 
 class pascal_voc(imdb):
@@ -178,7 +177,6 @@ class pascal_voc(imdb):
         Load image and bounding boxes info from XML file in the PASCAL VOC
         format.
         """
-        #pdb.set_trace()
         filename = os.path.join(self._data_path, 'Annotations', index + '.xml')
         tree = ET.parse(filename)
         objs = tree.findall('object')
@@ -190,9 +188,7 @@ class pascal_voc(imdb):
             #     print 'Removed {} difficult objects'.format(
             #         len(objs) - len(non_diff_objs))
             objs = non_diff_objs
-        #pdb.set_trace()
         num_objs = len(objs)
-	#pdb.set_trace()
         boxes = np.zeros((num_objs, 4), dtype=np.uint16)
         gt_classes = np.zeros((num_objs), dtype=np.int32)
         overlaps = np.zeros((num_objs, self.num_classes), dtype=np.float32)
@@ -207,9 +203,7 @@ class pascal_voc(imdb):
             y1 = float(max(float(bbox.find('ymin').text) - 1, 0))
             x2 = float(max(float(bbox.find('xmax').text) - 1, 0))
             y2 = float(max(float(bbox.find('ymax').text) - 1, 0))
-            #pdb.set_trace()
             cls = self._class_to_ind[obj.find('name').text.strip()]
-           # pdb.set_trace()
             boxes[ix, :] = [x1, y1, x2, y2]
             gt_classes[ix] = cls
             overlaps[ix, cls] = 1.0
