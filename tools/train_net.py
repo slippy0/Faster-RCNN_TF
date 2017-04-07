@@ -62,6 +62,7 @@ def parse_args():
     parser.add_argument('--set', dest='set_cfgs',
                         help='set config keys', default=None,
                         nargs=argparse.REMAINDER)
+
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit(1)
@@ -89,15 +90,14 @@ if __name__ == '__main__':
         np.random.seed(t)
 
     # Load imdbs for both source and target domain
-    #source_imdb = get_imdb(args.source_imdb_name, args.source_data_path)
-    #target_imdb = get_imdb(args.target_imdb_name, args.target_data_path)
-    #print 'source_imdb size: ', source_imdb.num_images
-    #print 'target_imdb size: ', target_imdb.num_images
-    #print 'Loaded dataset `{:s}` for training'.format(source_imdb.name)
-    #roidb = get_training_roidb(source_imdb)
-    imdb = get_transfer_imdb(args.source_imdb_name, args.target_imdb_name)
-
-    roidb = get_training_roidb(imdb)
+    source_imdb = get_imdb(args.source_imdb_name, args.source_data_path)
+    target_imdb = get_imdb(args.target_imdb_name, args.target_data_path)
+    print 'source_imdb size: ', source_imdb.num_images
+    print 'target_imdb size: ', target_imdb.num_images
+    print 'Loaded dataset `{:s}` for training'.format(source_imdb.name)
+    print 'Loaded dataset `{:s}` for trasnfer'.format(target_imdb.name)
+    source_roidb = get_training_roidb(source_imdb)
+    target_roidb = get_training_roidb(target_imdb)
 
     output_dir = get_output_dir(imdb, None)
     print 'Output will be saved to `{:s}`'.format(output_dir)
@@ -108,6 +108,7 @@ if __name__ == '__main__':
     network = get_network(args.network_name)
     print 'Use network `{:s}` in training'.format(args.network_name)
 
-    train_net(network, imdb, roidb, output_dir,
+    train_net(network, source_imdb, target_imdb,
+              source_roidb, target_roidb, output_dir,
               pretrained_model=args.pretrained_model,
               max_iters=args.max_iters)
