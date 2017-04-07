@@ -12,7 +12,7 @@
 import _init_paths
 from fast_rcnn.train import get_training_roidb, train_net
 from fast_rcnn.config import cfg,cfg_from_file, cfg_from_list, get_output_dir
-from datasets.factory import get_imdb
+from datasets.factory import get_imdb, get_transfer_imdb
 from networks.factory import get_network
 import argparse
 import pprint
@@ -89,14 +89,17 @@ if __name__ == '__main__':
         np.random.seed(t)
 
     # Load imdbs for both source and target domain
-    source_imdb = get_imdb(args.source_imdb_name, args.source_data_path)
-    target_imdb = get_imdb(args.target_imdb_name, args.target_data_path)
-    print 'source_imdb size: ', source_imdb.num_images
-    print 'target_imdb size: ', target_imdb.num_images
-    print 'Loaded dataset `{:s}` for training'.format(source_imdb.name)
-    roidb = get_training_roidb(source_imdb)
+    #source_imdb = get_imdb(args.source_imdb_name, args.source_data_path)
+    #target_imdb = get_imdb(args.target_imdb_name, args.target_data_path)
+    #print 'source_imdb size: ', source_imdb.num_images
+    #print 'target_imdb size: ', target_imdb.num_images
+    #print 'Loaded dataset `{:s}` for training'.format(source_imdb.name)
+    #roidb = get_training_roidb(source_imdb)
+    imdb = get_transfer_imdb(args.source_imdb_name, args.target_imdb_name)
 
-    output_dir = get_output_dir(source_imdb, None)
+    roidb = get_training_roidb(imdb)
+
+    output_dir = get_output_dir(imdb, None)
     print 'Output will be saved to `{:s}`'.format(output_dir)
 
     device_name = '/{}:{:d}'.format(args.device,args.device_id)
@@ -105,6 +108,6 @@ if __name__ == '__main__':
     network = get_network(args.network_name)
     print 'Use network `{:s}` in training'.format(args.network_name)
 
-    train_net(network, source_imdb, roidb, output_dir,
+    train_net(network, imdb, roidb, output_dir,
               pretrained_model=args.pretrained_model,
               max_iters=args.max_iters)
