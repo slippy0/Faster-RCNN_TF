@@ -6,11 +6,10 @@
 # --------------------------------------------------------
 
 """Train a Fast R-CNN network."""
-import pdb
 from fast_rcnn.config import cfg
-import gt_source_data_layer.roidb as gdl_roidb
-import roi_source_data_layer.roidb as rdl_roidb
-from roi_source_data_layer.layer import RoIDataLayer
+import gt_data_layer.roidb as gdl_roidb
+import roi_data_layer.roidb as rdl_roidb
+from roi_data_layer.layer import RoIDataLayer
 from utils.timer import Timer
 import numpy as np
 import os
@@ -168,7 +167,7 @@ class SolverWrapper(object):
 
         last_snapshot_iter = -1
         timer = Timer()
-        #pdb.set_trace()
+        pdb.set_trace()
         for iter in range(max_iters):
             # get one batch
             if iter % 0 == 0:
@@ -189,14 +188,15 @@ class SolverWrapper(object):
             # Run the network!
             timer.tic()
             rpn_loss_cls_value, rpn_loss_box_value,loss_cls_value, loss_box_value, _ = sess.run([rpn_cross_entropy, rpn_loss_box, cross_entropy, loss_box, train_op],
+                                                                                                feed_dict=feed_dict,
+                                                                                                options=run_options,
+                                                                                                run_metadata=run_metadata)
             timer.toc()
-
-            if cfg.TRAIN.DEBUG_TIMELINE:
-                trace = timeline.Timeline(step_stats=run_metadata.step_stats)
-                trace_file = open(str(long(time.time() * 1000)) + '-train-timeline.ctf.json', 'w')
-                trace_file.write(trace.generate_chrome_trace_format(show_memory=False))
-                trace_file.close()
-
+            #if cfg.TRAIN.DEBUG_TIMELINE:
+            #    trace = timeline.Timeline(step_stats=run_metadata.step_stats)
+            #    trace_file = open(str(long(time.time() * 1000)) + '-train-timeline.ctf.json', 'w')
+            #    trace_file.write(trace.generate_chrome_trace_format(show_memory=False))
+            #    trace_file.close()
             if (iter+1) % (cfg.TRAIN.DISPLAY) == 0:
                 print 'iter: %d / %d, total loss: %.4f, rpn_loss_cls: %.4f, rpn_loss_box: %.4f, loss_cls: %.4f, loss_box: %.4f, lr: %f'%\
                         (iter+1, max_iters, rpn_loss_cls_value + rpn_loss_box_value + loss_cls_value + loss_box_value ,rpn_loss_cls_value, rpn_loss_box_value,loss_cls_value, loss_box_value, lr.eval())
@@ -271,7 +271,8 @@ def filter_roidb(roidb):
 def train_net(network, source_imdb, target_imdb, source_roidb, target_roidb,
               output_dir, pretrained_model=None, max_iters=40000):
     """Train a Faster R-CNN network with domain transfer."""
-    roidb = filter_roidb(roidb)
+    source_roidb = filter_roidb(source_roidb)
+    target_roidb = filter_roidb(target_roidb)
     saver = tf.train.Saver(max_to_keep=100, write_version=tf.train.SaverDef.V1)
     with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
         sw = SolverWrapper(sess, saver, network, source_imdb, target_imdb,
