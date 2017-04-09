@@ -36,7 +36,6 @@ for split in ['71', '370']:
     __sets[name] = (lambda split=split, data_path=None:
             datasets.nthu(split, data_path))
 
-pdb.set_trace()
 def get_imdb(name, data_path=None):
     """Get an imdb (image database) by name."""
     if not __sets.has_key(name):
