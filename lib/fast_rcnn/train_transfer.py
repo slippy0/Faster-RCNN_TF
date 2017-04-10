@@ -170,7 +170,7 @@ class SolverWrapper(object):
 
         for iter in range(max_iters):
             # get one batch
-            if iter % 0 == 0:
+            if iter % 2 == 0:
                 blobs = source_data_layer.forward()
             else:
                 blobs = target_data_layer.forward()
