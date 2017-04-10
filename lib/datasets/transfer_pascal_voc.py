@@ -18,7 +18,6 @@ import uuid
 from voc_eval import voc_eval
 from fast_rcnn.config import cfg
 
-
 class transfer_pascal_voc(imdb):
     def __init__(self, image_set, is_source=True, devkit_path=None):
         if is_source:
@@ -26,7 +25,7 @@ class transfer_pascal_voc(imdb):
         else:
             name = 'target_' + image_set
         imdb.__init__(self, name)
-        self._year = 2007
+        self._year = '2007'
         self._image_set = image_set
         self._devkit_path = self._get_default_path() if devkit_path is None \
                             else devkit_path
