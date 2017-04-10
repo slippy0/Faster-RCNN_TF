@@ -27,9 +27,9 @@ echo Logging output to "$LOG"
 
 time python -m pdb ./tools/train_net.py --device ${DEV} --device_id ${DEV_ID} \
   --weights data/pretrain_model/VGG_imagenet.npy \
-  --source_imdb voc_2007_trainval \
+  --source_imdb transfer_source_trainval \
   --source_data_path data/driving_50k \
-  --target_imdb voc_2007_trainval \
+  --target_imdb transfer_target_trainval \
   --target_data_path data/KITTI \
   --iters 70000 \
   --cfg experiments/cfgs/faster_rcnn_end2end.yml \
