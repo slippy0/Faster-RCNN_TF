@@ -12,16 +12,15 @@ set -e
 
 export PYTHONUNBUFFERED="True"
 
-DEV=$1
-DEV_ID=$2
-NET=$3
+DEV=${1-gpu}
+DEV_ID=${2-1}
 
 array=( $@ )
 len=${#array[@]}
 EXTRA_ARGS=${array[@]:4:$len}
 EXTRA_ARGS_SLUG=${EXTRA_ARGS// /_}
 
-LOG="experiments/logs/faster_rcnn_end2end_${NET}_${EXTRA_ARGS_SLUG}.txt.`date +'%Y-%m-%d_%H-%M-%S'`"
+LOG="experiments/logs/faster_rcnn_end2end_${EXTRA_ARGS_SLUG}.txt.`date +'%Y-%m-%d_%H-%M-%S'`"
 exec &> >(tee -a "$LOG")
 echo Logging output to "$LOG"
 
