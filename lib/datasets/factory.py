@@ -8,10 +8,9 @@
 """Factory method for easily getting imdbs by name."""
 
 import datasets.pascal_voc
-import datasets.transfer_pascal_voc
-import datasets.imagenet3d
+from datasets.transfer_pascal_voc import transfer_pascal_voc
 import datasets.kitti
-import datasets.kitti_tracking
+import datasets.nthu
 import datasets.transfer
 
 import pdb
@@ -26,12 +25,12 @@ for year in ['2007']:
                 datasets.pascal_voc(split, year, data_path))
 
 # VOC transfer learning
-for split in ['train', 'val', 'trainval', 'test']:
+for split in ['trainval']:
     for is_source in [True, False]:
-        type = "source" if is_source else "target"
-        name = 'transfer_{}_{}'.format(type, split)
+        domain = "source" if is_source else "target"
+        name = 'transfer_{}_{}'.format(domain, split)
         __sets[name] = (lambda split=split, is_source=is_source, data_path=None:
-                        datasets.transfer_pascal_voc(split, is_source, data_path))
+                transfer_pascal_voc(split, is_source, data_path))
 
 # KITTI dataset
 for split in ['train', 'val', 'trainval', 'test']:
