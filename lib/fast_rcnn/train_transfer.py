@@ -167,7 +167,7 @@ class SolverWrapper(object):
 
         last_snapshot_iter = -1
         timer = Timer()
-        pdb.set_trace()
+
         for iter in range(max_iters):
             # get one batch
             if iter % 0 == 0:
@@ -214,7 +214,6 @@ def get_training_roidb(imdb):
     """Returns a roidb (Region of Interest database) for use in training."""
     if cfg.TRAIN.USE_FLIPPED:
         print 'Appending horizontally-flipped training examples...'
-        pdb.set_trace()
         imdb.append_flipped_images()
         print 'done'
 
