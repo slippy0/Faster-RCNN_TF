@@ -15,7 +15,9 @@ class VGGnet_train(Network):
         self.im_info = tf.placeholder(tf.float32, shape=[None, 3])
         self.gt_boxes = tf.placeholder(tf.float32, shape=[None, 5])
         self.keep_prob = tf.placeholder(tf.float32)
-        self.layers = dict({'data':self.data, 'im_info':self.im_info, 'gt_boxes':self.gt_boxes})
+        self.is_source = tf.placeholder(tf.int32, shape = [1]);
+       # self.layers = dict({'data':self.data, 'im_info':self.im_info, 'gt_boxes':self.gt_boxes})
+        self.layers = dict({'data':self.data, 'im_info':self.im_info, 'gt_boxes':self.gt_boxes, 'is_source': self.is_source})
         self.trainable = trainable
         self.setup()
 
@@ -73,7 +75,7 @@ class VGGnet_train(Network):
         (self.feed('rpn_cls_prob_reshape','rpn_bbox_pred','im_info')
              .proposal_layer(_feat_stride, anchor_scales, 'TRAIN',name = 'rpn_rois'))
 
-        (self.feed('rpn_rois','gt_boxes')
+        (self.feed('rpn_rois','gt_boxes', 'is_source')
              .proposal_target_layer(n_classes,name = 'roi-data'))
 
 
@@ -89,4 +91,14 @@ class VGGnet_train(Network):
 
         (self.feed('drop7')
              .fc(n_classes*4, relu=False, name='bbox_pred'))
+
+        #### domain adaptaion
+        (self.feed('conv5_3', 'rpn_rois')
+             .roi_pool(7, 7, 1.0/16, name='pool_5d')
+             .fc(1024, name='fc6_d')
+             .dropout(0.5, name='drop6_d')
+             .fc(1024, name='fc7_d')
+             .dropout(0.5, name='drop7_d')
+             .fc(2, relu=False, name='conf_score')
+             .softmax(name='conf_prob'))
 
