@@ -24,7 +24,7 @@ LOG="experiments/logs/faster_rcnn_end2end_${EXTRA_ARGS_SLUG}.txt.`date +'%Y-%m-%
 exec &> >(tee -a "$LOG")
 echo Logging output to "$LOG"
 
-time python -m pdb ./tools/train_net.py --device ${DEV} --device_id ${DEV_ID} \
+time python -m pdb ./tools/train_transfer_net.py --device ${DEV} --device_id ${DEV_ID} \
   --weights data/pretrain_model/VGG_imagenet.npy \
   --source_imdb transfer_source_trainval \
   --source_data_path data/driving_50k \

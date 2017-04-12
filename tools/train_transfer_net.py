@@ -10,14 +10,15 @@
 """Train a Fast R-CNN network on a region of interest database."""
 
 import _init_paths
-from fast_rcnn.train import get_training_roidb, train_net
+from fast_rcnn.train_transfer import get_training_roidb, train_net
 from fast_rcnn.config import cfg,cfg_from_file, cfg_from_list, get_output_dir
-from datasets.factory import get_imdb
+from datasets.factory import get_imdb, get_transfer_imdb
 from networks.factory import get_network
 import argparse
 import pprint
 import numpy as np
 import sys
+import pdb
 
 def parse_args():
     """
@@ -40,12 +41,18 @@ def parse_args():
     parser.add_argument('--cfg', dest='cfg_file',
                         help='optional config file',
                         default=None, type=str)
-    parser.add_argument('--imdb', dest='imdb_name',
+    parser.add_argument('--source_imdb', dest='source_imdb_name',
                         help='dataset to train on',
                         default='voc_2007_train', type=str)
-    parser.add_argument('--data_path', dest='data_path',
-                        help='Folder with imdb data',
-                        default='VOCdevkit2007', type=str)
+    parser.add_argument('--source_data_path', dest='source_data_path',
+                        help='Folder with source imdb data',
+                        default=None, type=str)
+    parser.add_argument('--target_imdb', dest='target_imdb_name',
+                        help='dataset to transfer to',
+                        default="kitti_train", type=str)
+    parser.add_argument('--target_data_path', dest='target_data_path',
+                        help='Folder with target imdb data',
+                        default=None, type=str)
     parser.add_argument('--rand', dest='randomize',
                         help='randomize (do not use a fixed seed)',
                         action='store_true')
@@ -76,18 +83,23 @@ if __name__ == '__main__':
 
     print('Using config:')
     pprint.pprint(cfg)
+    #pdb.set_trace()
     if not args.randomize:
         # fix the random seeds (numpy and caffe) for reproducibility
         t = cfg.RNG_SEED
         np.random.seed(t)
 
     # Load imdbs for both source and target domain
-    imdb = get_imdb(args.imdb_name, args.data_path)
-    print 'imdb size: ', imdb.num_images
-    print 'Loaded dataset `{:s}` for training'.format(imdb.name)
-    roidb = get_training_roidb(imdb)
+    source_imdb = get_imdb(args.source_imdb_name, args.source_data_path)
+    target_imdb = get_imdb(args.target_imdb_name, args.target_data_path)
+    print 'source_imdb size: ', source_imdb.num_images
+    print 'target_imdb size: ', target_imdb.num_images
+    print 'Loaded dataset `{:s}` for training'.format(source_imdb.name)
+    print 'Loaded dataset `{:s}` for trasnfer'.format(target_imdb.name)
+    source_roidb = get_training_roidb(source_imdb)
+    target_roidb = get_training_roidb(target_imdb)
 
-    output_dir = get_output_dir(imdb, None)
+    output_dir = get_output_dir(source_imdb, None)
     print 'Output will be saved to `{:s}`'.format(output_dir)
 
     device_name = '/{}:{:d}'.format(args.device,args.device_id)
@@ -96,6 +108,7 @@ if __name__ == '__main__':
     network = get_network(args.network_name)
     print 'Use network `{:s}` in training'.format(args.network_name)
 
-    train_net(network, imdb, roidb, output_dir,
+    train_net(network, source_imdb, target_imdb,
+              source_roidb, target_roidb, output_dir,
               pretrained_model=args.pretrained_model,
               max_iters=args.max_iters)
