@@ -1,5 +1,6 @@
 import tensorflow as tf
 from networks.network import Network
+from fast_rcnn.config import cfg
 
 
 #define
@@ -15,6 +16,7 @@ class VGGnet_train(Network):
         self.im_info = tf.placeholder(tf.float32, shape=[None, 3])
         self.gt_boxes = tf.placeholder(tf.float32, shape=[None, 5])
         self.keep_prob = tf.placeholder(tf.float32)
+      #  self.is_source = tf.placeholder(tf.int32, shape = [cfg.TRAIN.RPN_POST_NMS_TOP_N])
         self.is_source = tf.placeholder(tf.int32, shape = [1]);
        # self.layers = dict({'data':self.data, 'im_info':self.im_info, 'gt_boxes':self.gt_boxes})
         self.layers = dict({'data':self.data, 'im_info':self.im_info, 'gt_boxes':self.gt_boxes, 'is_source': self.is_source})

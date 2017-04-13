@@ -14,7 +14,7 @@ from utils.cython_bbox import bbox_overlaps
 import pdb
 
 
-DEBUG = True
+DEBUG = False
 _count = 0
 _fg_num = 0
 _bg_num = 0

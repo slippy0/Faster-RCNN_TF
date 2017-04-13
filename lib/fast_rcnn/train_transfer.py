@@ -18,6 +18,7 @@ import sys
 from tensorflow.python.client import timeline
 import time
 import pdb
+import re
 
 class SolverWrapper(object):
     """A simple wrapper around Caffe's solver.
@@ -83,6 +84,81 @@ class SolverWrapper(object):
                 sess.run(net.bbox_weights_assign, feed_dict={net.bbox_weights: orig_0})
                 sess.run(net.bbox_bias_assign, feed_dict={net.bbox_biases: orig_1})
 
+    def recover_train(self, sess):
+        """Take a snapshot of the network after unnormalizing the learned
+        bounding-box regression weights. This enables easy use at test-time.
+        """
+        net = self.net
+
+        if cfg.TRAIN.BBOX_REG and net.layers.has_key('bbox_pred'):
+            # save original values
+            with tf.variable_scope('bbox_pred', reuse=True):
+                weights = tf.get_variable("weights")
+                biases = tf.get_variable("biases")
+
+            orig_0 = weights.eval()
+            orig_1 = biases.eval()
+
+            # scale and shift with bbox reg unnormalization; then save snapshot
+            weights_shape = weights.get_shape().as_list()
+            sess.run(net.bbox_weights_assign, feed_dict={net.bbox_weights: orig_0 / np.tile(self.bbox_stds, (weights_shape[0], 1))})
+            sess.run(net.bbox_bias_assign, feed_dict={net.bbox_biases: orig_1 / self.bbox_stds})
+
+    def snapshot_npy(self, sess, iter):
+        """Take a snapshot of the network after unnormalizing the learned
+        bounding-box regression weights. This enables easy use at test-time.
+        """
+        net = self.net
+
+        if cfg.TRAIN.BBOX_REG and net.layers.has_key('bbox_pred'):
+            # save original values
+            with tf.variable_scope('bbox_pred', reuse=True):
+                weights = tf.get_variable("weights")
+                biases = tf.get_variable("biases")
+
+            orig_0 = weights.eval()
+            orig_1 = biases.eval()
+            # scale and shift with bbox reg unnormalization; then save snapshot
+            weights_shape = weights.get_shape().as_list()
+            sess.run(net.bbox_weights_assign, feed_dict={net.bbox_weights: orig_0 * np.tile(self.bbox_stds, (weights_shape[0], 1))})
+            sess.run(net.bbox_bias_assign, feed_dict={net.bbox_biases: orig_1 * self.bbox_stds + self.bbox_means})
+
+        if not os.path.exists(self.output_dir):
+            os.makedirs(self.output_dir)
+        data = {}
+        all_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
+        for i in range(len(all_variables)):
+            variable_name = all_variables[i].name
+
+            parts = variable_name.split('/');
+            if (len(parts) == 1):
+                continue
+            if (len(parts) == 2):
+                scope_name = parts[0]
+            if (len(parts) == 3):
+                scope_name = parts[0] + '/' + parts[1]
+                vari_name_temp = parts[-1].split(':')[0]
+                if (vari_name_temp != "weights" and vari_name_temp != "biases"):
+                    continue
+            if (len(parts) > 3):
+                continue
+            vari_name = parts[-1].split(':')[0]
+            if (scope_name not in data.keys()):
+                data[scope_name] = {}
+            data[scope_name][vari_name] = sess.run(all_variables[i])
+        filename = self.output_dir + '/' + str(iter + 1) + '.npy'
+        np.save(filename,data);
+
+        print 'Wrote snapshot to: {:s}'.format(filename)
+
+        if cfg.TRAIN.BBOX_REG and net.layers.has_key('bbox_pred'):
+            with tf.variable_scope('bbox_pred', reuse=True):
+                # restore net to original state
+                sess.run(net.bbox_weights_assign, feed_dict={net.bbox_weights: orig_0})
+                sess.run(net.bbox_bias_assign, feed_dict={net.bbox_biases: orig_1})
+
+
+
     def _modified_smooth_l1(self, sigma, bbox_pred, bbox_targets, bbox_inside_weights, bbox_outside_weights):
         """
             ResultLoss = outside_weights * SmoothL1(inside_weights * (bbox_pred - bbox_targets))
@@ -106,7 +182,6 @@ class SolverWrapper(object):
 
     def train_model(self, sess, max_iters):
         """Network training loop."""
-
         source_data_layer = get_data_layer(self.source_roidb,
                                                   self.source_imdb.num_classes)
         target_data_layer = get_data_layer(self.target_roidb,
@@ -144,40 +219,79 @@ class SolverWrapper(object):
         smooth_l1 = self._modified_smooth_l1(1.0, bbox_pred, bbox_targets, bbox_inside_weights, bbox_outside_weights)
         loss_box = tf.reduce_mean(tf.reduce_sum(smooth_l1, reduction_indices=[1]))
 
-        # final loss
-        loss = cross_entropy + loss_box + rpn_cross_entropy + rpn_loss_box
+        # Domain classification
+        conf_score = self.net.get_output('conf_prob')
+        #conf_label = tf.reshape(self.net.is_source,[-1])
+        conf_label = tf.reshape(self.net.get_output('roi-data')[-1],[-1])
+        conf_cross_entropy = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=conf_score, labels=conf_label))
 
-        # optimizer and learning rate
+        # Loss
+        conf_loss = -tf.reduce_mean(tf.log(conf_score))
+
+        loss_source = cross_entropy + loss_box + rpn_cross_entropy + rpn_loss_box + conf_loss
+        loss_target = conf_loss
+        loss_domain = conf_cross_entropy
+
+
+        ## Extract the list of variables
+        all_variables_trained = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
+        num_var = len(all_variables_trained)
+        normal_variables = []
+        domain_variables = []
+        for i in range(num_var):
+            variable_name = all_variables_trained[i].name
+            if (re.search(r'fc6_d', variable_name) != None):
+                domain_variables.append(all_variables_trained[i])
+                continue
+            if (re.search(r'fc7_d', variable_name) != None):
+                domain_variables.append(all_variables_trained[i])
+                continue
+            if (re.search(r'conf_score', variable_name) != None):
+                domain_variables.append(all_variables_trained[i])
+                continue
+            normal_variables.append(all_variables_trained[i])
+
+        print "num of all variables: ", len(all_variables_trained)
+        print "num of normal varibales: ", len(normal_variables)
+        print "num of domain variables: ", len(domain_variables)
+
+        # Optimizers and learning rate
         global_step = tf.Variable(0, trainable=False)
         lr = tf.train.exponential_decay(cfg.TRAIN.LEARNING_RATE, global_step,
                                         cfg.TRAIN.STEPSIZE, 0.1, staircase=True)
         momentum = cfg.TRAIN.MOMENTUM
-        train_op = tf.train.MomentumOptimizer(lr, momentum).minimize(loss, global_step=global_step)
+        train_op_source = tf.train.MomentumOptimizer(lr, momentum).minimize(loss_source, global_step=global_step, var_list=normal_variables)
+        train_op_target = tf.train.MomentumOptimizer(lr, momentum).minimize(loss_target, var_list=normal_variables)
+        train_op_domain = tf.train.MomentumOptimizer(lr, momentum).minimize(loss_domain, var_list=domain_variables)
+
         # intialize variables
         sess.run(tf.global_variables_initializer())
-        if self.pretrained_model is not None:
-            print ('Loading pretrained model '
-                   'weights from {:s}').format(self.pretrained_model)
+  	if self.pretrained_model is not None:
+            print ('Loading pretrained model weights from {:s}').format(self.pretrained_model)
             if self.pretrained_model.endswith('.npy'):
-                self.net.load(self.pretrained_model, sess, self.saver, True)
+                self.net.load(self.pretrained_model, sess, self.saver, ignore_missing=True)
+                self.recover_train(sess)
             elif self.pretrained_model.endswith('.ckpt'):
                 self.saver.restore(sess, self.pretrained_model)
+                self.recover_train(sess)
             else:
-                raise TypeError("Unknown model type! Weights not loaded.")
+                print("Unknown model type! Weights not loaded.")
 
         last_snapshot_iter = -1
         timer = Timer()
-
         for iter in range(max_iters):
             # get one batch
             if iter % 2 == 0:
                 blobs = source_data_layer.forward()
+                blobs['is_source'] = np.array([1], dtype='f')
             else:
                 blobs = target_data_layer.forward()
+                blobs['is_source'] = np.array([0], dtype='f')
+
 
             # Make one SGD update
             feed_dict={self.net.data: blobs['data'], self.net.im_info: blobs['im_info'], self.net.keep_prob: 0.5, \
-                           self.net.gt_boxes: blobs['gt_boxes']}
+                           self.net.gt_boxes: blobs['gt_boxes'], self.net.is_source: blobs['is_source']}
 
             run_options = None
             run_metadata = None
@@ -185,30 +299,53 @@ class SolverWrapper(object):
                 run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
                 run_metadata = tf.RunMetadata()
 
-            # Run the network!
             timer.tic()
-            rpn_loss_cls_value, rpn_loss_box_value,loss_cls_value, loss_box_value, _ = sess.run([rpn_cross_entropy, rpn_loss_box, cross_entropy, loss_box, train_op],
+            #print sess.run(global_step)
+            #conf_loss_value, _ = sess.run([conf_loss, train_op_target], feed_dict=feed_dict, options=run_options, run_metadata=run_metadata)
+            if iter % 2 == 0:
+                rpn_loss_cls_value, rpn_loss_box_value,loss_cls_value, loss_box_value, conf_loss_value, _ = sess.run([rpn_cross_entropy, rpn_loss_box, cross_entropy, loss_box, conf_loss, train_op_source],
                                                                                                 feed_dict=feed_dict,
                                                                                                 options=run_options,
                                                                                                 run_metadata=run_metadata)
-            timer.toc()
-            #if cfg.TRAIN.DEBUG_TIMELINE:
-            #    trace = timeline.Timeline(step_stats=run_metadata.step_stats)
-            #    trace_file = open(str(long(time.time() * 1000)) + '-train-timeline.ctf.json', 'w')
-            #    trace_file.write(trace.generate_chrome_trace_format(show_memory=False))
-            #    trace_file.close()
-            if (iter+1) % (cfg.TRAIN.DISPLAY) == 0:
-                print 'iter: %d / %d, total loss: %.4f, rpn_loss_cls: %.4f, rpn_loss_box: %.4f, loss_cls: %.4f, loss_box: %.4f, lr: %f'%\
-                        (iter+1, max_iters, rpn_loss_cls_value + rpn_loss_box_value + loss_cls_value + loss_box_value ,rpn_loss_cls_value, rpn_loss_box_value,loss_cls_value, loss_box_value, lr.eval())
-                print 'speed: {:.3f}s / iter'.format(timer.average_time)
 
+                if (iter) % (cfg.TRAIN.DISPLAY) == 0:
+                    print 'iter: %6d / %6d, source: total loss: %.4f, rpn_loss_cls: %.4f, rpn_loss_box: %.4f, loss_cls: %.4f, loss_box: %.4f, conf_loss_source: %.4f, lr: %f' % \
+                            (iter, max_iters, rpn_loss_cls_value + rpn_loss_box_value + loss_cls_value + loss_box_value + conf_loss_value, rpn_loss_cls_value, rpn_loss_box_value,loss_cls_value, loss_box_value, conf_loss_value, lr.eval())
+            else:
+                loss_target_value, _ = sess.run([conf_loss, train_op_target], feed_dict=feed_dict, options=run_options,run_metadata=run_metadata)
+
+                if (iter - 1) % (cfg.TRAIN.DISPLAY) == 0:
+                    print '                       target: conf_loss_target: %.4f'%( loss_target_value)
+
+            conf_cross_entropy_value, _ = sess.run([conf_cross_entropy, train_op_domain],
+                                                        feed_dict=feed_dict,
+                                                        options=run_options,
+                                                        run_metadata=run_metadata)
+
+            timer.toc()
+            if cfg.TRAIN.DEBUG_TIMELINE:
+                trace = timeline.Timeline(step_stats=run_metadata.step_stats)
+                trace_file = open(str(long(time.time() * 1000)) + '-train-timeline.ctf.json', 'w')
+                trace_file.write(trace.generate_chrome_trace_format(show_memory=False))
+                trace_file.close()
+
+            ## TODO: I believe we can move all the print statements back here
+            if (iter+1) % (cfg.TRAIN.DISPLAY) == 0:
+            #    print 'iter: %d / %d, total loss: %.4f, rpn_loss_cls: %.4f, rpn_loss_box: %.4f, loss_cls: %.4f, loss_box: %.4f, conf_loss: %.4f, lr: %f'%\
+             #           (iter+1, max_iters, rpn_loss_cls_value + rpn_loss_box_value + loss_cls_value + loss_box_value ,rpn_loss_cls_value, rpn_loss_box_value,loss_cls_value, loss_box_value, conf_loss_value, lr.eval())
+                print '                       domain: conf_cross_entropy: %.4f'%(conf_cross_entropy_value)
+            #    print 'speed: {:.3f}s / iter'.format(timer.average_time)
+            #    print "bbox pred: ", sess.run(all_variables_trained[38])
+            #    print "bbox pred: ", sess.run(all_variables_trained[39])
             if (iter+1) % cfg.TRAIN.SNAPSHOT_ITERS == 0:
                 last_snapshot_iter = iter
                 self.snapshot(sess, iter)
+                self.snapshot_npy(sess, iter)
 
 
         if last_snapshot_iter != iter:
             self.snapshot(sess, iter)
+            self.snapshot_npy(sess, iter)
 
 def get_training_roidb(imdb):
     """Returns a roidb (Region of Interest database) for use in training."""

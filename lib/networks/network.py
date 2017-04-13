@@ -47,17 +47,10 @@ class Network(object):
             saver.restore(session, data_path)
         else:
             data_dict = np.load(data_path).item()
-            #with tf.variable_scope('conv5_1', reuse = True):
-           #     temp = tf.get_variable('weights')
-          #      pdb.set_trace()
-           #     print temp.name
-            #pdb.set_trace()
             for key in data_dict:
              #   if (key == 'bbox_pred'): continue;
                 with tf.variable_scope(key, reuse=True):
-             #       pdb.set_trace()
                     for subkey in data_dict[key]:
-             #           pdb.set_trace()
                         try:
                             var = tf.get_variable(subkey)
                             session.run(var.assign(data_dict[key][subkey]))
@@ -65,12 +58,10 @@ class Network(object):
                         except ValueError:
                             print "ignore "+key
                             if not ignore_missing:
-
                                 raise
 
     def feed(self, *args):
         assert len(args)!=0
-        #pdb.set_trace()
         self.inputs = []
         for layer in args:
             if isinstance(layer, basestring):
@@ -202,14 +193,14 @@ class Network(object):
 
             rois,labels,bbox_targets,bbox_inside_weights,bbox_outside_weights, conf_labels = tf.py_func(proposal_target_layer_py,[input[0],input[1],classes, input[2]],[tf.float32,tf.float32,tf.float32,tf.float32,tf.float32, tf.float32])
 
-            rois = tf.reshape(rois,[-1,5] , name = 'rois') 
+            rois = tf.reshape(rois,[-1,5] , name = 'rois')
             labels = tf.convert_to_tensor(tf.cast(labels,tf.int32), name = 'labels')
             bbox_targets = tf.convert_to_tensor(bbox_targets, name = 'bbox_targets')
             bbox_inside_weights = tf.convert_to_tensor(bbox_inside_weights, name = 'bbox_inside_weights')
             bbox_outside_weights = tf.convert_to_tensor(bbox_outside_weights, name = 'bbox_outside_weights')
             conf_labels = tf.convert_to_tensor(tf.cast(conf_labels,tf.int32), name = 'conf_labels')
 
-           
+
             return rois, labels, bbox_targets, bbox_inside_weights, bbox_outside_weights, conf_labels
 
 
