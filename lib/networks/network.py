@@ -8,8 +8,24 @@ from rpn_msr.proposal_target_layer_tf import proposal_target_layer as proposal_t
 import pdb
 
 
-
 DEFAULT_PADDING = 'SAME'
+
+def variable_summaries(var, name):
+    """
+    Attach a lot of summaries to a Tensor (for TensorBoard visualization).
+
+    Example inputs: Layer weights, biases, kernel, etc
+    """
+    with tf.name_scope('summaries'):
+        mean = tf.reduce_mean(var)
+    tf.summary.scalar(name + '/mean', mean)
+    with tf.name_scope('stddev'):
+        stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
+    tf.summary.scalar(name + '/stddev', stddev)
+    tf.summary.scalar(name + '/max', tf.reduce_max(var))
+    tf.summary.scalar(name + '/min', tf.reduce_min(var))
+    tf.summary.histogram(name, var)
+
 
 def layer(op):
     def layer_decorated(self, *args, **kwargs):
@@ -48,7 +64,7 @@ class Network(object):
         else:
             data_dict = np.load(data_path).item()
             for key in data_dict:
-             #   if (key == 'bbox_pred'): continue;
+                #   if (key == 'bbox_pred'): continue;
                 with tf.variable_scope(key, reuse=True):
                     for subkey in data_dict[key]:
                         try:
@@ -94,19 +110,20 @@ class Network(object):
 
     @layer
     def conv(self, input, k_h, k_w, c_o, s_h, s_w, name, relu=True, padding=DEFAULT_PADDING, group=1, trainable=True):
-        #pdb.set_trace()
         self.validate_padding(padding)
         c_i = input.get_shape()[-1]
         assert c_i%group==0
         assert c_o%group==0
         convolve = lambda i, k: tf.nn.conv2d(i, k, [1, s_h, s_w, 1], padding=padding)
         with tf.variable_scope(name) as scope:
-            #pdb.set_trace()
 
             init_weights = tf.truncated_normal_initializer(0.0, stddev=0.01)
             init_biases = tf.constant_initializer(0.0)
+
             kernel = self.make_var('weights', [k_h, k_w, c_i/group, c_o], init_weights, trainable)
             biases = self.make_var('biases', [c_o], init_biases, trainable)
+            variable_summaries(kernel, "weights")
+            variable_summaries(biases, "biases")
 
             if group==1:
                 conv = convolve(input, kernel)
@@ -130,19 +147,19 @@ class Network(object):
     def max_pool(self, input, k_h, k_w, s_h, s_w, name, padding=DEFAULT_PADDING):
         self.validate_padding(padding)
         return tf.nn.max_pool(input,
-                              ksize=[1, k_h, k_w, 1],
-                              strides=[1, s_h, s_w, 1],
-                              padding=padding,
-                              name=name)
+                ksize=[1, k_h, k_w, 1],
+                strides=[1, s_h, s_w, 1],
+                padding=padding,
+                name=name)
 
     @layer
     def avg_pool(self, input, k_h, k_w, s_h, s_w, name, padding=DEFAULT_PADDING):
         self.validate_padding(padding)
         return tf.nn.avg_pool(input,
-                              ksize=[1, k_h, k_w, 1],
-                              strides=[1, s_h, s_w, 1],
-                              padding=padding,
-                              name=name)
+                ksize=[1, k_h, k_w, 1],
+                strides=[1, s_h, s_w, 1],
+                padding=padding,
+                name=name)
 
     @layer
     def roi_pool(self, input, pooled_height, pooled_width, spatial_scale, name):
@@ -155,10 +172,10 @@ class Network(object):
 
         print input
         return roi_pool_op.roi_pool(input[0], input[1],
-                                    pooled_height,
-                                    pooled_width,
-                                    spatial_scale,
-                                    name=name)[0]
+                pooled_height,
+                pooled_width,
+                spatial_scale,
+                name=name)[0]
 
     @layer
     def proposal_layer(self, input, _feat_stride, anchor_scales, cfg_key, name):
@@ -208,28 +225,28 @@ class Network(object):
     def reshape_layer(self, input, d,name):
         input_shape = tf.shape(input)
         if name == 'rpn_cls_prob_reshape':
-             return tf.transpose(tf.reshape(tf.transpose(input,[0,3,1,2]),[input_shape[0],
-                    int(d),tf.cast(tf.cast(input_shape[1],tf.float32)/tf.cast(d,tf.float32)*tf.cast(input_shape[3],tf.float32),tf.int32),input_shape[2]]),[0,2,3,1],name=name)
+            return tf.transpose(tf.reshape(tf.transpose(input,[0,3,1,2]),[input_shape[0],
+                int(d),tf.cast(tf.cast(input_shape[1],tf.float32)/tf.cast(d,tf.float32)*tf.cast(input_shape[3],tf.float32),tf.int32),input_shape[2]]),[0,2,3,1],name=name)
         else:
-             return tf.transpose(tf.reshape(tf.transpose(input,[0,3,1,2]),[input_shape[0],
-                    int(d),tf.cast(tf.cast(input_shape[1],tf.float32)*(tf.cast(input_shape[3],tf.float32)/tf.cast(d,tf.float32)),tf.int32),input_shape[2]]),[0,2,3,1],name=name)
+            return tf.transpose(tf.reshape(tf.transpose(input,[0,3,1,2]),[input_shape[0],
+                int(d),tf.cast(tf.cast(input_shape[1],tf.float32)*(tf.cast(input_shape[3],tf.float32)/tf.cast(d,tf.float32)),tf.int32),input_shape[2]]),[0,2,3,1],name=name)
 
     @layer
     def feature_extrapolating(self, input, scales_base, num_scale_base, num_per_octave, name):
         return feature_extrapolating_op.feature_extrapolating(input,
-                              scales_base,
-                              num_scale_base,
-                              num_per_octave,
-                              name=name)
+                scales_base,
+                num_scale_base,
+                num_per_octave,
+                name=name)
 
     @layer
     def lrn(self, input, radius, alpha, beta, name, bias=1.0):
         return tf.nn.local_response_normalization(input,
-                                                  depth_radius=radius,
-                                                  alpha=alpha,
-                                                  beta=beta,
-                                                  bias=bias,
-                                                  name=name)
+                depth_radius=radius,
+                alpha=alpha,
+                beta=beta,
+                bias=bias,
+                name=name)
 
     @layer
     def concat(self, inputs, axis, name):
@@ -260,6 +277,8 @@ class Network(object):
 
             weights = self.make_var('weights', [dim, num_out], init_weights, trainable)
             biases = self.make_var('biases', [num_out], init_biases, trainable)
+            variable_summaries(weights, "weights")
+            variable_summaries(biases, "biases")
 
             op = tf.nn.relu_layer if relu else tf.nn.xw_plus_b
             fc = op(feed_in, weights, biases, name=scope.name)

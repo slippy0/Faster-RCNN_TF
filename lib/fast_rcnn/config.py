@@ -97,6 +97,9 @@ __C.TRAIN.SNAPSHOT_ITERS = 5000
 __C.TRAIN.SNAPSHOT_PREFIX = 'VGGnet_fast_rcnn'
 __C.TRAIN.SNAPSHOT_INFIX = ''
 
+# Iterations between saving summaries
+__C.TRAIN.SUMMARY_ITERS = 10
+
 # Use a prefetch thread in roi_data_layer.layer
 # So far I haven't found this useful; likely more engineering work is required
 __C.TRAIN.USE_PREFETCH = False

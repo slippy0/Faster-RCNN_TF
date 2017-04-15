@@ -230,10 +230,12 @@ class SolverWrapper(object):
         loss_target = conf_loss
         loss_domain = conf_cross_entropy
 
-        tf.summary.scalar("loss_source", loss_source)
-        tf.summary.scalar("loss_target", loss_target)
-        tf.summary.scalar("loss_domain", conf_cross_entropy)
-        summary_writer = tf.summary.FileWriter("tensorboard_test/", sess)
+        loss_source_summary = tf.summary.scalar("loss_source", loss_source)
+        loss_target_summary = tf.summary.scalar("loss_target", loss_target)
+        loss_cross_entropy_summary = tf.summary.scalar("loss_domain", conf_cross_entropy)
+        summary_merged = tf.summary.merge_all()
+        #summary_merged = tf.summary.merge([loss_source_summary, loss_target_summary, loss_cross_entropy_summary])
+        summary_writer = tf.summary.FileWriter("tensorboard_test/", sess.graph)
 
         ## Extract the list of variables
         all_variables_trained = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
@@ -305,16 +307,21 @@ class SolverWrapper(object):
             if iter % 2 == 0:
                 rpn_loss_cls_value, rpn_loss_box_value, loss_cls_value, loss_box_value, conf_loss_value, _ = \
                         sess.run([rpn_cross_entropy, rpn_loss_box, cross_entropy, loss_box, conf_loss, train_op_source],
-                        feed_dict=feed_dict,
-                        options=run_options,
-                        run_metadata=run_metadata)
+                                feed_dict=feed_dict,
+                                options=run_options,
+                                run_metadata=run_metadata)
             else:
-                loss_target_value, _ = sess.run([conf_loss, train_op_target], feed_dict=feed_dict, options=run_options,run_metadata=run_metadata)
+                loss_target_value, _ = \
+                        sess.run([conf_loss, train_op_target],
+                                feed_dict=feed_dict,
+                                options=run_options,
+                                run_metadata=run_metadata)
 
-            conf_cross_entropy_value, _ = sess.run([conf_cross_entropy, train_op_domain],
-                                                        feed_dict=feed_dict,
-                                                        options=run_options,
-                                                        run_metadata=run_metadata)
+            conf_cross_entropy_value, _ = \
+                    sess.run([conf_cross_entropy, train_op_domain],
+                            feed_dict=feed_dict,
+                            options=run_options,
+                            run_metadata=run_metadata)
 
             timer.toc()
             if cfg.TRAIN.DEBUG_TIMELINE:
@@ -331,10 +338,15 @@ class SolverWrapper(object):
                 print 'speed: {:.3f}s / iter'.format(timer.average_time)
             #    print "bbox pred: ", sess.run(all_variables_trained[38])
             #    print "bbox pred: ", sess.run(all_variables_trained[39])
+
             if (iter+1) % cfg.TRAIN.SNAPSHOT_ITERS == 0:
                 last_snapshot_iter = iter
                 self.snapshot(sess, iter)
                 self.snapshot_npy(sess, iter)
+
+            if (iter+1) % cfg.TRAIN.SUMMARY_ITERS == 0:
+                summary_results = sess.run(summary_merged, feed_dict=feed_dict)
+                summary_writer.add_summary(summary_results, iter)
 
 
         if last_snapshot_iter != iter:
