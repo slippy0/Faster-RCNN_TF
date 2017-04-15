@@ -1,5 +1,3 @@
-# --------------------------------------------------------
-# Fast R-CNN
 # Copyright (c) 2015 Microsoft
 # Licensed under The MIT License [see LICENSE for details]
 # Written by Ross Girshick
@@ -232,6 +230,10 @@ class SolverWrapper(object):
         loss_target = conf_loss
         loss_domain = conf_cross_entropy
 
+        tf.summary.scalar("loss_source", loss_source)
+        tf.summary.scalar("loss_target", loss_target)
+        tf.summary.scalar("loss_domain", conf_cross_entropy)
+        summary_writer = tf.summary.FileWriter("tensorboard_test/", sess)
 
         ## Extract the list of variables
         all_variables_trained = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
@@ -300,22 +302,14 @@ class SolverWrapper(object):
                 run_metadata = tf.RunMetadata()
 
             timer.tic()
-            #print sess.run(global_step)
-            #conf_loss_value, _ = sess.run([conf_loss, train_op_target], feed_dict=feed_dict, options=run_options, run_metadata=run_metadata)
             if iter % 2 == 0:
-                rpn_loss_cls_value, rpn_loss_box_value,loss_cls_value, loss_box_value, conf_loss_value, _ = sess.run([rpn_cross_entropy, rpn_loss_box, cross_entropy, loss_box, conf_loss, train_op_source],
-                                                                                                feed_dict=feed_dict,
-                                                                                                options=run_options,
-                                                                                                run_metadata=run_metadata)
-
-                if (iter) % (cfg.TRAIN.DISPLAY) == 0:
-                    print 'iter: %6d / %6d, source: total loss: %.4f, rpn_loss_cls: %.4f, rpn_loss_box: %.4f, loss_cls: %.4f, loss_box: %.4f, conf_loss_source: %.4f, lr: %f' % \
-                            (iter, max_iters, rpn_loss_cls_value + rpn_loss_box_value + loss_cls_value + loss_box_value + conf_loss_value, rpn_loss_cls_value, rpn_loss_box_value,loss_cls_value, loss_box_value, conf_loss_value, lr.eval())
+                rpn_loss_cls_value, rpn_loss_box_value, loss_cls_value, loss_box_value, conf_loss_value, _ = \
+                        sess.run([rpn_cross_entropy, rpn_loss_box, cross_entropy, loss_box, conf_loss, train_op_source],
+                        feed_dict=feed_dict,
+                        options=run_options,
+                        run_metadata=run_metadata)
             else:
                 loss_target_value, _ = sess.run([conf_loss, train_op_target], feed_dict=feed_dict, options=run_options,run_metadata=run_metadata)
-
-                if (iter - 1) % (cfg.TRAIN.DISPLAY) == 0:
-                    print '                       target: conf_loss_target: %.4f'%( loss_target_value)
 
             conf_cross_entropy_value, _ = sess.run([conf_cross_entropy, train_op_domain],
                                                         feed_dict=feed_dict,
@@ -329,12 +323,12 @@ class SolverWrapper(object):
                 trace_file.write(trace.generate_chrome_trace_format(show_memory=False))
                 trace_file.close()
 
-            ## TODO: I believe we can move all the print statements back here
             if (iter+1) % (cfg.TRAIN.DISPLAY) == 0:
-            #    print 'iter: %d / %d, total loss: %.4f, rpn_loss_cls: %.4f, rpn_loss_box: %.4f, loss_cls: %.4f, loss_box: %.4f, conf_loss: %.4f, lr: %f'%\
-             #           (iter+1, max_iters, rpn_loss_cls_value + rpn_loss_box_value + loss_cls_value + loss_box_value ,rpn_loss_cls_value, rpn_loss_box_value,loss_cls_value, loss_box_value, conf_loss_value, lr.eval())
+                print 'iter: %6d / %6d, source: total loss: %.4f, rpn_loss_cls: %.4f, rpn_loss_box: %.4f, loss_cls: %.4f, loss_box: %.4f, conf_loss_source: %.4f, lr: %f' % \
+                        (iter, max_iters, rpn_loss_cls_value + rpn_loss_box_value + loss_cls_value + loss_box_value + conf_loss_value, rpn_loss_cls_value, rpn_loss_box_value,loss_cls_value, loss_box_value, conf_loss_value, lr.eval())
+                print '                       target: conf_loss_target: %.4f'%( loss_target_value)
                 print '                       domain: conf_cross_entropy: %.4f'%(conf_cross_entropy_value)
-            #    print 'speed: {:.3f}s / iter'.format(timer.average_time)
+                print 'speed: {:.3f}s / iter'.format(timer.average_time)
             #    print "bbox pred: ", sess.run(all_variables_trained[38])
             #    print "bbox pred: ", sess.run(all_variables_trained[39])
             if (iter+1) % cfg.TRAIN.SNAPSHOT_ITERS == 0:
