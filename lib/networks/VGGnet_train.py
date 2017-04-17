@@ -15,9 +15,8 @@ class VGGnet_train(Network):
         self.im_info = tf.placeholder(tf.float32, shape=[None, 3])
         self.gt_boxes = tf.placeholder(tf.float32, shape=[None, 5])
         self.keep_prob = tf.placeholder(tf.float32)
-      #  self.is_source = tf.placeholder(tf.int32, shape = [cfg.TRAIN.RPN_POST_NMS_TOP_N])
         self.is_source = tf.placeholder(tf.int32, shape = [1]);
-       # self.layers = dict({'data':self.data, 'im_info':self.im_info, 'gt_boxes':self.gt_boxes})
+        #self.layers = dict({'data':self.data, 'im_info':self.im_info, 'gt_boxes':self.gt_boxes})
         self.layers = dict({'data':self.data, 'im_info':self.im_info, 'gt_boxes':self.gt_boxes, 'is_source': self.is_source})
         self.trainable = trainable
         self.setup()
@@ -76,7 +75,7 @@ class VGGnet_train(Network):
         (self.feed('rpn_cls_prob_reshape','rpn_bbox_pred','im_info')
              .proposal_layer(_feat_stride, anchor_scales, 'TRAIN',name = 'rpn_rois'))
 
-        (self.feed('rpn_rois','gt_boxes', 'is_source')
+        (self.feed('rpn_rois','gt_boxes')
              .proposal_target_layer(n_classes,name = 'roi-data'))
 
 

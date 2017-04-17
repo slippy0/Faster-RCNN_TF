@@ -19,7 +19,7 @@ _count = 0
 _fg_num = 0
 _bg_num = 0
 
-def proposal_target_layer(rpn_rois, gt_boxes,_num_classes, is_source):
+def proposal_target_layer(rpn_rois, gt_boxes,_num_classes):
     """
     Assign object detection proposals to ground-truth targets. Produces proposal
     classification labels and bounding-box regression targets.
@@ -65,16 +65,8 @@ def proposal_target_layer(rpn_rois, gt_boxes,_num_classes, is_source):
     bbox_inside_weights = bbox_inside_weights.reshape(-1,_num_classes*4)
 
     bbox_outside_weights = np.array(bbox_inside_weights > 0).astype(np.float32)
-    num_roi = rpn_rois.shape[0];
-    #pdb.set_trace()
-    if (is_source[0] == 1):
-        conf_label = np.ones([num_roi, 1], dtype=np.float32)
-    else:
-        conf_label = np.zeros([num_roi, 1], dtype=np.float32)
-    #pdb.set_trace()
 
-
-    return rois,labels,bbox_targets,bbox_inside_weights,bbox_outside_weights, conf_label
+    return rois,labels,bbox_targets,bbox_inside_weights,bbox_outside_weights
 
 def _get_bbox_regression_labels(bbox_target_data, num_classes):
     """Bounding-box regression targets (bbox_target_data) are stored in a

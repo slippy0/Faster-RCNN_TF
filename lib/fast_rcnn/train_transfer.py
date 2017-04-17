@@ -219,8 +219,14 @@ class SolverWrapper(object):
 
         # Domain classification
         conf_score = self.net.get_output('conf_prob')
-        #conf_label = tf.reshape(self.net.is_source,[-1])
-        conf_label = tf.reshape(self.net.get_output('roi-data')[-1],[-1])
+
+        #This bit here is to produce a domain label vector of the right size.
+        num_rois = tf.shape(conf_score)[0]
+        #num_rois = tf.Print(num_rois, [num_rois], "Number of rois: ")
+        conf_label = tf.cond(
+                tf.equal(self.net.is_source[0], 1), # check if source
+                lambda: tf.ones([num_rois], dtype=tf.int32), # ones if source
+                lambda: tf.zeros([num_rois], dtype=tf.int32)) # zeros if target
         conf_cross_entropy = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=conf_score, labels=conf_label))
 
         # Loss
