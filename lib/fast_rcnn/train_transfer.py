@@ -230,11 +230,11 @@ class SolverWrapper(object):
         loss_target = conf_loss
         loss_domain = conf_cross_entropy
 
-        loss_source_summary = tf.summary.scalar("loss_source", loss_source)
-        loss_target_summary = tf.summary.scalar("loss_target", loss_target)
-        loss_cross_entropy_summary = tf.summary.scalar("loss_domain", conf_cross_entropy)
+        # Summaries
+        tf.summary.scalar("loss_source", loss_source)
+        tf.summary.scalar("loss_target", loss_target)
+        tf.summary.scalar("loss_domain", conf_cross_entropy)
         summary_merged = tf.summary.merge_all()
-        #summary_merged = tf.summary.merge([loss_source_summary, loss_target_summary, loss_cross_entropy_summary])
         summary_writer = tf.summary.FileWriter("tensorboard_test/", sess.graph)
 
         ## Extract the list of variables
@@ -270,7 +270,7 @@ class SolverWrapper(object):
 
         # intialize variables
         sess.run(tf.global_variables_initializer())
-  	if self.pretrained_model is not None:
+        if self.pretrained_model is not None:
             print ('Loading pretrained model weights from {:s}').format(self.pretrained_model)
             if self.pretrained_model.endswith('.npy'):
                 self.net.load(self.pretrained_model, sess, self.saver, ignore_missing=True)
