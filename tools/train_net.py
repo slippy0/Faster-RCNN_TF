@@ -45,7 +45,7 @@ def parse_args():
                         default='voc_2007_train', type=str)
     parser.add_argument('--data_path', dest='data_path',
                         help='Folder with imdb data',
-                        default='VOCdevkit2007', type=str)
+                        default=None, type=str)
     parser.add_argument('--rand', dest='randomize',
                         help='randomize (do not use a fixed seed)',
                         action='store_true')
