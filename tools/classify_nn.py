@@ -7,7 +7,7 @@ import os, sys
 import progressbar
 import argparse
 
-from networks.classify import ClassifyDomain
+from networks.classify import ClassifyDomainTrain
 
 def load_features(source_dir, target_dir, feature_cache=None, label_cache=None):
     """Load in all features from the given folders. Features are assumed to be .npy files"""
@@ -99,7 +99,7 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-def train_net(sess, net, x, y, num_epochs=10):
+def train_net(sess, net, x, y, x_test, y_test, num_epochs=10):
     # Set up optimizer
     global_step = tf.Variable(0, trainable=False)
     output = net.get_output('conf_score')
@@ -111,10 +111,10 @@ def train_net(sess, net, x, y, num_epochs=10):
     # Set up summary writer
     tf.summary.scalar("loss", loss_op)
     summary_merged = tf.summary.merge_all()
-    summary_writer = tf.summary.FileWriter("tensorboard_test/", sess.graph)
+    train_writer = tf.summary.FileWriter(os.path.join("tensorboard_test", "train"), sess.graph)
 
     # Set up model saver
-    saver = tf.train.Saver(max_to_keep=50)
+    saver = tf.train.Saver(max_to_keep=100)
 
     # Initialize
     init_op = tf.global_variables_initializer()
@@ -135,12 +135,15 @@ def train_net(sess, net, x, y, num_epochs=10):
 
             if (iter+1) % 25 == 0:
                 summary_results = sess.run(summary_merged, feed_dict=feed_dict)
-                summary_writer.add_summary(summary_results, global_step.eval())
+                train_writer.add_summary(summary_results, global_step.eval())
 
         print "epoch %i loss: %0.3f" % (epoch+1, loss_val)
-        filename = os.path.join("checkpoints", "%i.ckpt" % (epoch+1))
-        saver.save(sess, filename)
+        test_net(sess, net, x_test, y_test)
+        filename = os.path.join("checkpoints", "model")
+        saver.save(sess, filename, epoch+1)
     print "Done training!"
+
+
 
 def test_net(sess, net, x, y):
     # Set up accuracy measurement op
@@ -185,8 +188,8 @@ if __name__ == '__main__':
 
     with tf.Session() as sess:
         # Set up network
-        net = ClassifyDomain()
+        net = ClassifyDomainTrain()
 
-        train_net(sess, net, x_train, y_train, num_epochs=20)
+        train_net(sess, net, x_train, y_train, x_test, y_test, num_epochs=100)
 
-        test_net(sess, net, x_test, y_test)
+        #test_net(sess, net, x_test, y_test)
