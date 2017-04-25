@@ -5,8 +5,10 @@ from utils.timer import Timer
 import random
 import progressbar
 
+FEATURE_LAYER = "fc7"
+
 def extract_feature(sess, net, im):
-    """Extract image feature from the pool5 layer for single image."""
+    """Extract image feature from the feature layer layer for single image."""
     # Reshape to be a 4-d tensor of shape (batch, height, width, channels)
     if im.ndim != 4:
         im = im.reshape(1, *im.shape)
@@ -14,13 +16,12 @@ def extract_feature(sess, net, im):
     im_info = np.array(
         [[im.shape[1], im.shape[2], 1]],
         dtype=np.float32)
-    feature_op = net.get_output("pool_5")
+    feature_op = net.get_output(FEATURE_LAYER)
     feed_dict = {net.data: im, net.im_info: im_info}
 
     feature = sess.run([feature_op], feed_dict=feed_dict)[0]
-    feature = np.mean(feature, (1,2))
+    #feature = np.mean(feature, (1,2))
 
-    #return feature.reshape([-1])
     return feature
 
 def extract_features(sess, net, imdb, output_dir, max_images=None):
