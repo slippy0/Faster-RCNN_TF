@@ -42,6 +42,9 @@ def parse_args():
     parser.add_argument('--imdb', dest='imdb_name',
                         help='dataset to test',
                         default='voc_2007_test', type=str)
+    parser.add_argument('--data_path', dest='data_path',
+                        help='Folder with imdb data',
+                        default=None, type=str)
     parser.add_argument('--comp', dest='comp_mode', help='competition mode',
                         action='store_true')
     parser.add_argument('--network', dest='network_name',
@@ -73,7 +76,7 @@ if __name__ == '__main__':
 
     weights_filename = os.path.splitext(os.path.basename(args.model))[0]
 
-    imdb = get_imdb(args.imdb_name)
+    imdb = get_imdb(args.imdb_name, args.data_path)
     imdb.competition_mode(args.comp_mode)
 
     device_name = '/{}:{:d}'.format(args.device,args.device_id)
@@ -91,7 +94,8 @@ if __name__ == '__main__':
     # start a session
     saver = tf.train.Saver()
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
-    saver.restore(sess, args.model)
+    #saver.restore(sess, args.model)
+    network.load(args.model, sess, saver, ignore_missing=True)
     print ('Loading model weights from {:s}').format(args.model)
 
     test_net(sess, network, imdb, weights_filename)
