@@ -218,7 +218,7 @@ class SolverWrapper(object):
         loss_box = tf.reduce_mean(tf.reduce_sum(smooth_l1, reduction_indices=[1]))
 
         # Domain classification
-        conf_score = self.net.get_output('conf_prob')
+        conf_score = self.net.get_output('conf_score')
 
         #This bit here is to produce a domain label vector of the right size.
         num_rois = tf.shape(conf_score)[0]
