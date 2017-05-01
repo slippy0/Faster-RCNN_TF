@@ -3,7 +3,7 @@ from networks.network import Network
 
 n_classes = 2
 _feat_stride = [16,]
-anchor_scales = [8, 16, 32] 
+anchor_scales = [8, 16, 32]
 
 class VGGnet_test(Network):
     def __init__(self, trainable=True):
@@ -50,9 +50,9 @@ class VGGnet_test(Network):
              .reshape_layer(len(anchor_scales)*3*2,name = 'rpn_cls_prob_reshape'))
 
         (self.feed('rpn_cls_prob_reshape','rpn_bbox_pred','im_info')
-             .proposal_layer(_feat_stride, anchor_scales, 'TEST', name = 'rois'))
-        
-        (self.feed('conv5_3', 'rois')
+             .proposal_layer(_feat_stride, anchor_scales, 'TEST', name = 'rpn_rois'))
+
+        (self.feed('conv5_3', 'rpn_rois')
              .roi_pool(7, 7, 1.0/16, name='pool_5')
              .fc(4096, name='fc6')
              .fc(4096, name='fc7')

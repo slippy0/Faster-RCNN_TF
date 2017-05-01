@@ -93,18 +93,18 @@ def _project_im_rois(im_rois, scales):
 def _get_blobs(im, rois):
     """Convert an image and RoIs within that image into network inputs."""
     if cfg.TEST.HAS_RPN:
-        blobs = {'data' : None, 'rois' : None}
+        blobs = {'data' : None, 'rpn_rois' : None}
         blobs['data'], im_scale_factors = _get_image_blob(im)
     else:
-        blobs = {'data' : None, 'rois' : None}
+        blobs = {'data' : None, 'rpn_rois' : None}
         blobs['data'], im_scale_factors = _get_image_blob(im)
         if cfg.IS_MULTISCALE:
             if cfg.IS_EXTRAPOLATING:
-                blobs['rois'] = _get_rois_blob(rois, cfg.TEST.SCALES)
+                blobs['rpn_rois'] = _get_rois_blob(rois, cfg.TEST.SCALES)
             else:
-                blobs['rois'] = _get_rois_blob(rois, cfg.TEST.SCALES_BASE)
+                blobs['rpn_rois'] = _get_rois_blob(rois, cfg.TEST.SCALES_BASE)
         else:
-            blobs['rois'] = _get_rois_blob(rois, cfg.TEST.SCALES_BASE)
+            blobs['rpn_rois'] = _get_rois_blob(rois, cfg.TEST.SCALES_BASE)
 
     return blobs, im_scale_factors
 
@@ -150,10 +150,10 @@ def im_detect(sess, net, im, boxes=None):
     # on the unique subset.
     if cfg.DEDUP_BOXES > 0 and not cfg.TEST.HAS_RPN:
         v = np.array([1, 1e3, 1e6, 1e9, 1e12])
-        hashes = np.round(blobs['rois'] * cfg.DEDUP_BOXES).dot(v)
+        hashes = np.round(blobs['rpn_rois'] * cfg.DEDUP_BOXES).dot(v)
         _, index, inv_index = np.unique(hashes, return_index=True,
                                         return_inverse=True)
-        blobs['rois'] = blobs['rois'][index, :]
+        blobs['rpn_rois'] = blobs['rpn_rois'][index, :]
         boxes = boxes[index, :]
 
     if cfg.TEST.HAS_RPN:
@@ -165,7 +165,7 @@ def im_detect(sess, net, im, boxes=None):
     if cfg.TEST.HAS_RPN:
         feed_dict={net.data: blobs['data'], net.im_info: blobs['im_info'], net.keep_prob: 1.0}
     else:
-        feed_dict={net.data: blobs['data'], net.rois: blobs['rois'], net.keep_prob: 1.0}
+        feed_dict={net.data: blobs['data'], net.rois: blobs['rpn_rois'], net.keep_prob: 1.0}
 
     run_options = None
     run_metadata = None
@@ -173,7 +173,7 @@ def im_detect(sess, net, im, boxes=None):
         run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
         run_metadata = tf.RunMetadata()
 
-    cls_score, cls_prob, bbox_pred, rois = sess.run([net.get_output('cls_score'), net.get_output('cls_prob'), net.get_output('bbox_pred'),net.get_output('rois')],
+    cls_score, cls_prob, bbox_pred, rois = sess.run([net.get_output('cls_score'), net.get_output('cls_prob'), net.get_output('bbox_pred'),net.get_output('rpn_rois')],
                                                     feed_dict=feed_dict,
                                                     options=run_options,
                                                     run_metadata=run_metadata)

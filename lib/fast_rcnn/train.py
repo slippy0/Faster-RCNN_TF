@@ -18,7 +18,6 @@ import tensorflow as tf
 import sys
 from tensorflow.python.client import timeline
 import time
-import pdb
 
 class SolverWrapper(object):
     """A simple wrapper around Caffe's solver.
@@ -216,6 +215,13 @@ class SolverWrapper(object):
         # final loss
         loss = cross_entropy + loss_box + rpn_cross_entropy + rpn_loss_box
 
+        # Summaries
+        tf.summary.scalar("loss_total", loss)
+        tf.summary.scalar("loss_cross_entroy", loss_box)
+        tf.summary.scalar("loss_box", loss_box)
+        summary_merged = tf.summary.merge_all()
+        summary_writer = tf.summary.FileWriter("tensorboard_test/", sess.graph)
+
         # Optimizers and learning rate
         global_step = tf.Variable(0, trainable=False)
         lr = tf.train.exponential_decay(cfg.TRAIN.LEARNING_RATE, global_step,
@@ -276,6 +282,9 @@ class SolverWrapper(object):
                 self.snapshot(sess, iter)
                 self.snapshot_npy(sess, iter)
 
+            if (iter+1) % cfg.TRAIN.SUMMARY_ITERS == 0:
+                summary_results = sess.run(summary_merged, feed_dict=feed_dict)
+                summary_writer.add_summary(summary_results, iter)
 
         if last_snapshot_iter != iter:
             self.snapshot(sess, iter)
@@ -342,7 +351,10 @@ def train_net(network, imdb, roidb, output_dir, pretrained_model=None, max_iters
     """Train a Fast R-CNN network."""
     roidb = filter_roidb(roidb)
     saver = tf.train.Saver(max_to_keep=100, write_version=tf.train.SaverDef.V1)
-    with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+    config.allow_soft_placement = True
+    with tf.Session(config=config) as sess:
         sw = SolverWrapper(sess, saver, network, imdb, roidb, output_dir, pretrained_model=pretrained_model)
         print 'Solving...'
         sw.train_model(sess, max_iters)

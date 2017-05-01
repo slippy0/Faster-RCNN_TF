@@ -25,7 +25,7 @@ for year in ['2007']:
                 datasets.pascal_voc(split, year, data_path))
 
 # VOC transfer learning
-for split in ['trainval']:
+for split in ['train', 'val', 'trainval', 'test']:
     for is_source in [True, False]:
         domain = "source" if is_source else "target"
         name = 'transfer_{}_{}'.format(domain, split)
