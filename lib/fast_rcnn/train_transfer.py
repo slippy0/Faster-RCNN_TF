@@ -219,6 +219,7 @@ class SolverWrapper(object):
 
         # Domain classification
         conf_score = self.net.get_output('conf_score')
+        conf_prob = self.net.get_output('conf_prob')
 
         #This bit here is to produce a domain label vector of the right size.
         num_rois = tf.shape(conf_score)[0]
@@ -230,39 +231,39 @@ class SolverWrapper(object):
         conf_cross_entropy = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=conf_score, labels=conf_label))
 
         # Loss
-        conf_loss = -tf.reduce_mean(tf.log(conf_score))
+        conf_loss = -tf.reduce_mean(tf.log(conf_prob))
 
         loss_source = cross_entropy + loss_box + rpn_cross_entropy + rpn_loss_box + conf_loss
-        loss_target = conf_loss
+        loss_confusion = conf_loss
         loss_domain = conf_cross_entropy
 
         # Summaries
         tf.summary.scalar("loss_source", loss_source)
-        tf.summary.scalar("loss_target", loss_target)
+        tf.summary.scalar("loss_confusion", loss_confusion)
         tf.summary.scalar("loss_domain", conf_cross_entropy)
         summary_merged = tf.summary.merge_all()
         summary_writer = tf.summary.FileWriter("tensorboard_test/", sess.graph)
 
         ## Extract the list of variables
         all_variables_trained = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
-        num_var = len(all_variables_trained)
-        normal_variables = []
-        domain_variables = []
-        for i in range(num_var):
-            variable_name = all_variables_trained[i].name
-            if (re.search(r'fc6_d', variable_name) != None):
-                domain_variables.append(all_variables_trained[i])
-                continue
-            if (re.search(r'fc7_d', variable_name) != None):
-                domain_variables.append(all_variables_trained[i])
-                continue
+        repr_variables = [] # Variables up to feature extraction layer
+        detection_variables = [] # All variables used in detection
+        domain_variables = [] # The domain classification layers
+        for i, var in enumerate(all_variables_trained):
+            variable_name = var.name
             if (re.search(r'conf_score', variable_name) != None):
-                domain_variables.append(all_variables_trained[i])
+                domain_variables.append(var)
                 continue
-            normal_variables.append(all_variables_trained[i])
+            if (re.search(r'cls_score', variable_name) != None):
+                detection_variables.append(var)
+            repr_variables.append(var)
+
+        # Detections is a superset of the feature extraction layes
+        detection_variables.extend(repr_variables)
 
         print "num of all variables: ", len(all_variables_trained)
-        print "num of normal varibales: ", len(normal_variables)
+        print "num of representation variables: ", len(repr_variables)
+        print "num of detection variables: ", len(detection_variables)
         print "num of domain variables: ", len(domain_variables)
 
         # Optimizers and learning rate
@@ -270,8 +271,8 @@ class SolverWrapper(object):
         lr = tf.train.exponential_decay(cfg.TRAIN.LEARNING_RATE, global_step,
                                         cfg.TRAIN.STEPSIZE, 0.1, staircase=True)
         momentum = cfg.TRAIN.MOMENTUM
-        train_op_source = tf.train.MomentumOptimizer(lr, momentum).minimize(loss_source, global_step=global_step, var_list=normal_variables)
-        train_op_target = tf.train.MomentumOptimizer(lr, momentum).minimize(loss_target, var_list=normal_variables)
+        train_op_source = tf.train.MomentumOptimizer(lr, momentum).minimize(loss_source, global_step=global_step, var_list=detection_variables)
+        train_op_confusion = tf.train.MomentumOptimizer(lr, momentum).minimize(loss_confusion, var_list=repr_variables)
         train_op_domain = tf.train.MomentumOptimizer(lr, momentum).minimize(loss_domain, var_list=domain_variables)
 
         # intialize variables
@@ -317,8 +318,8 @@ class SolverWrapper(object):
                                 options=run_options,
                                 run_metadata=run_metadata)
             else:
-                loss_target_value, _ = \
-                        sess.run([conf_loss, train_op_target],
+                loss_confusion_value, _ = \
+                        sess.run([conf_loss, train_op_confusion],
                                 feed_dict=feed_dict,
                                 options=run_options,
                                 run_metadata=run_metadata)
@@ -338,8 +339,8 @@ class SolverWrapper(object):
 
             if (iter+1) % (cfg.TRAIN.DISPLAY) == 0:
                 print 'iter: %6d / %6d, source: total loss: %.4f, rpn_loss_cls: %.4f, rpn_loss_box: %.4f, loss_cls: %.4f, loss_box: %.4f, conf_loss_source: %.4f, lr: %f' % \
-                        (iter, max_iters, rpn_loss_cls_value + rpn_loss_box_value + loss_cls_value + loss_box_value + conf_loss_value, rpn_loss_cls_value, rpn_loss_box_value,loss_cls_value, loss_box_value, conf_loss_value, lr.eval())
-                print '                       target: conf_loss_target: %.4f'%( loss_target_value)
+                        (iter+1, max_iters, rpn_loss_cls_value + rpn_loss_box_value + loss_cls_value + loss_box_value + conf_loss_value, rpn_loss_cls_value, rpn_loss_box_value,loss_cls_value, loss_box_value, conf_loss_value, lr.eval())
+                print '                       target: conf_loss_confusion: %.4f'%( loss_confusion_value)
                 print '                       domain: conf_cross_entropy: %.4f'%(conf_cross_entropy_value)
                 print 'speed: {:.3f}s / iter'.format(timer.average_time)
             #    print "bbox pred: ", sess.run(all_variables_trained[38])
