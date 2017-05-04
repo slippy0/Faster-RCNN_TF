@@ -293,3 +293,9 @@ class Network(object):
     @layer
     def dropout(self, input, keep_prob, name):
         return tf.nn.dropout(input, keep_prob, name=name)
+
+    @layer
+    def coral(self, input, mat, name):
+        """Apply normalization matrix, computed via CORAL"""
+        mat = mat.astype(np.float32)
+        return tf.matmul(input, mat, name=name)
