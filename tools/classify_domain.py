@@ -6,33 +6,57 @@ import progressbar
 import matplotlib.pyplot as plt
 import argparse
 
-def load_features(feature_dir):
-    """Load in all features from a folder. Features are assumed to be .npy files"""
-    if not os.path.exists(feature_dir):
-        raise IOError("Feature directory %s doesn't exist!" % feature_dir)
+def load_features(source_feature_dir, target_feature_dir, source_cache=None, target_cache=None):
+    """Load in all features from the given folders. Features are assumed to be .npy files"""
 
-    print "Loading features from folder '%s'" % feature_dir
+    def _load_features_helper(feature_dir):
+        """
+        Helper function to handle the actual loading.
+        Loads all .npy files in the given folder.
+        """
+        if not os.path.exists(feature_dir):
+            raise IOError("Feature directory %s doesn't exist!" % feature_dir)
 
-    # Iterate over all files in given directory
-    features = None
-    bar = progressbar.ProgressBar()
-    for file in bar(os.listdir(feature_dir)):
-        file_path = os.path.join(feature_dir, file)
+        print "Loading features from folder '%s'" % feature_dir
 
-        if not file.endswith('.npy'):
-            print "Ignoring %s" % file_path
-            continue
+        # Iterate over all files in given directory
+        names = [os.path.join(feature_dir, n) for n in os.listdir(feature_dir)]
+        file_paths = [n for n in names if os.path.isfile(n)]
+        num_files = len(file_paths)
 
-        feature = np.load(file_path)
-        if feature.ndim != 2:
-            feature = np.mean(feature, axis=(1,2))
+        bar = progressbar.ProgressBar(redirect_stdout=True)
+        feature_list = [None] * num_files
+        for i, file_path in bar(enumerate(file_paths), max_value=num_files):
+            if not file_path.endswith('.npy'):
+                print "Ignoring %s" % file_path
+                continue
 
-        if features is None:
-            features = feature
-        else:
-            features = np.vstack((features, feature))
+            feature = np.load(file_path)
+            feature_list[i] = feature
 
-    return features
+        # Concat into one array
+        features = np.vstack(feature_list)
+
+        return features
+
+    # First try to load cached features
+    if (source_cache is not None) and (target_cache is not None) and \
+            os.path.exists(source_cache) and os.path.exists(target_cache):
+        x = np.load(source_cache)
+        y = np.load(target_cache)
+
+        print "Loaded cached features"
+        return x, y
+
+    source_features = _load_features_helper(source_feature_dir)
+    if source_cache is not None:
+        np.save(source_cache, source_features)
+
+    target_features = _load_features_helper(target_feature_dir)
+    if target_cache is not None:
+        np.save(target_cache, target_features)
+
+    return source_features, target_features
 
 def parse_args():
     """
@@ -45,11 +69,11 @@ def parse_args():
     parser.add_argument('target_data_path',
                         help='Folder with target domain features',
                         type=str)
-    parser.add_argument('--feature_cache_file', dest='feature_cache_file',
-                        help='File where loaded features will be cached',
+    parser.add_argument('--source_cache_file', dest='source_cache_file',
+                        help='File where source features will be cached',
                         default=None, type=str)
-    parser.add_argument('--label_cache_file', dest='label_cache_file',
-                        help='File where computed labels will be cached',
+    parser.add_argument('--target_cache_file', dest='target_cache_file',
+                        help='File where target features will be cached',
                         default=None, type=str)
 
     if len(sys.argv) == 1:
@@ -67,29 +91,22 @@ if __name__ == '__main__':
 
     source_dir = args.source_data_path
     target_dir = args.target_data_path
-    x_cache = args.feature_cache_file
-    y_cache = args.label_cache_file
+    source_cache = args.source_cache_file
+    target_cache = args.target_cache_file
 
-    # First try to load cached features
-    if (x_cache is not None) and (y_cache is not None) and \
-            os.path.exists(x_cache) and os.path.exists(y_cache):
-        x = np.load(x_cache)
-        y = np.load(y_cache)
-    else:
-        source_features = load_features(source_dir)
-        target_features = load_features(target_dir)
-        x = np.vstack([source_features, target_features])
+    source_features, target_features = load_features(source_dir, target_dir, source_cache, target_cache)
 
-        n_source = source_features.shape[0]
-        n_target = target_features.shape[0]
-        source_label = np.ones(n_source)
-        target_label = np.zeros(n_target)
-        y = np.hstack([source_label, target_label])
+    num_source = source_features.shape[0]
+    num_target = target_features.shape[0]
+    print "Loaded %i source features" % num_source
+    print "Loaded %i target features" % num_target
 
-        np.save(x_cache, y)
-        np.save(y_cache, x)
+    x = np.vstack((source_features, target_features))
 
-    print "Loaded %i features!" % (x.shape[0])
+    y_source = np.ones(num_source)
+    y_target = np.zeros(num_target)
+    y = np.hstack((y_source, y_target))
+
 
     # Split the data into train and test
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.5)
@@ -98,8 +115,8 @@ if __name__ == '__main__':
     svm = svm.LinearSVC()
     svm.fit(x_train, y_train)
 
-    score = svm.score(x_test, y_test)
-    print "Score: %0.2f" % score
+    #score = svm.score(x_test, y_test)
+    #print "Score: %0.2f" % score
 
     # Create the plot
     distances = svm.decision_function(x_test)
